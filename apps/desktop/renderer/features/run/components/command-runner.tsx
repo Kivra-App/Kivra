@@ -14,17 +14,17 @@ type commandRunnerProps = {
   onRunComplete: (result: runResult) => void;
 };
 
-export function CommandRunner({
+export const CommandRunner = ({
   projectId,
   projectPath,
   onRunComplete
-}: commandRunnerProps) {
+}: commandRunnerProps) => {
   const { t } = useTranslation();
   const [command, setCommand] = useState("pnpm build");
   const runCommand = useRunCommand();
   const canUseNativeActions = isTauriRuntime();
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     if (!command.trim() || !canUseNativeActions) {
@@ -35,7 +35,7 @@ export function CommandRunner({
       { projectId, projectPath, command: command.trim() },
       { onSuccess: onRunComplete }
     );
-  }
+  };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-2">
@@ -78,4 +78,4 @@ export function CommandRunner({
       )}
     </form>
   );
-}
+};

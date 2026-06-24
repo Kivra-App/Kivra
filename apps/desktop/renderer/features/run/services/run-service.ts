@@ -10,11 +10,11 @@ type nativeRunResult = Omit<runResult, "id" | "projectId" | "errors"> & {
   >;
 };
 
-export async function runProjectCommand(args: {
+export const runProjectCommand = async (args: {
   projectId: string;
   projectPath: string;
   command: string;
-}): Promise<runResult> {
+}): Promise<runResult> => {
   const run = await invokeCommand<nativeRunResult>("run_project_command", {
     projectPath: args.projectPath,
     command: args.command
@@ -33,4 +33,4 @@ export async function runProjectCommand(args: {
       createdAt: run.createdAt
     }))
   };
-}
+};

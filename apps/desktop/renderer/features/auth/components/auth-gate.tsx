@@ -11,7 +11,7 @@ type authGateProps = {
   children: ReactNode;
 };
 
-export function AuthGate({ children }: authGateProps) {
+export const AuthGate = ({ children }: authGateProps) => {
   const { t } = useTranslation();
   const authUser = useAuthUser();
   const location = useLocation();
@@ -40,4 +40,4 @@ export function AuthGate({ children }: authGateProps) {
   }
 
   return children;
-}
+};

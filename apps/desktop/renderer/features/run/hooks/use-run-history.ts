@@ -11,13 +11,13 @@ import {
 } from "@/features/run/services/run-history-service";
 import type { runResult } from "@/features/run/types/run";
 
-export function useRunHistory(projectId: string) {
+export const useRunHistory = (projectId: string) => {
   const [runs, setRuns] = useState<runResult[]>(() => getStoredRuns(projectId));
 
   useEffect(() => {
     let isActive = true;
 
-    async function loadRuns() {
+    const loadRuns = async () => {
       const localRuns = getStoredRuns(projectId);
       const syncedRuns = await fetchSyncedRuns(projectId);
       const nextRuns = mergeRuns(localRuns, syncedRuns);
@@ -29,7 +29,7 @@ export function useRunHistory(projectId: string) {
       if (isActive) {
         setRuns(nextRuns);
       }
-    }
+    };
 
     void loadRuns();
 
@@ -38,19 +38,19 @@ export function useRunHistory(projectId: string) {
     };
   }, [projectId]);
 
-  function addRun(run: runResult) {
+  const addRun = (run: runResult) => {
     setRuns(saveProjectRun(projectId, run));
     void syncRun(run);
-  }
+  };
 
   return {
     runs,
     addRun
   };
-}
+};
 
-export function useRunMetrics(projectIds: string[]) {
-  return useMemo(() => {
+export const useRunMetrics = (projectIds: string[]) =>
+  useMemo(() => {
     const runs = getAllStoredRuns(projectIds);
     const resolvedErrorIds = new Set(
       projectIds.flatMap((projectId) => Array.from(getResolvedErrorIds(projectId)))
@@ -65,4 +65,3 @@ export function useRunMetrics(projectIds: string[]) {
         .filter((error) => !resolvedErrorIds.has(error.id)).length
     };
   }, [projectIds]);
-}

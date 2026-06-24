@@ -6,20 +6,18 @@ import {
   signOut
 } from "@/features/auth/services/auth-service";
 
-export function useAuthUser() {
-  return useQuery({
+export const useAuthUser = () =>
+  useQuery({
     queryKey: ["auth-user"],
     queryFn: getCurrentUser
   });
-}
 
-export function useGithubLogin() {
-  return useMutation({
+export const useGithubLogin = () =>
+  useMutation({
     mutationFn: signInWithGithub
   });
-}
 
-export function useSignOut() {
+export const useSignOut = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -28,4 +26,4 @@ export function useSignOut() {
       void queryClient.invalidateQueries({ queryKey: ["auth-user"] });
     }
   });
-}
+};

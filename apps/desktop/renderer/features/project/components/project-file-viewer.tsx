@@ -15,7 +15,7 @@ type projectFileViewerProps = {
 
 type viewMode = "code" | "preview";
 
-export function ProjectFileViewer({ filePath, project }: projectFileViewerProps) {
+export const ProjectFileViewer = ({ filePath, project }: projectFileViewerProps) => {
   const { t } = useTranslation();
   const [viewMode, setViewMode] = useState<viewMode>("code");
   const file = useProjectFile({ filePath, project });
@@ -98,7 +98,7 @@ export function ProjectFileViewer({ filePath, project }: projectFileViewerProps)
       )}
     </motion.div>
   );
-}
+};
 
 type codeViewerProps = {
   content: string;
@@ -106,7 +106,7 @@ type codeViewerProps = {
   language: string;
 };
 
-function CodeViewer({ compact = false, content, language }: codeViewerProps) {
+const CodeViewer = ({ compact = false, content, language }: codeViewerProps) => {
   const lines = content.split("\n");
   const isNode = language === "Node";
 
@@ -136,9 +136,9 @@ function CodeViewer({ compact = false, content, language }: codeViewerProps) {
       </pre>
     </div>
   );
-}
+};
 
-function MarkdownPreview({ content }: { content: string }) {
+const MarkdownPreview = ({ content }: { content: string }) => {
   const lines = content.split("\n");
   const blocks = [];
   let index = 0;
@@ -223,9 +223,9 @@ function MarkdownPreview({ content }: { content: string }) {
       <div className="mx-auto max-w-3xl space-y-1">{blocks}</div>
     </div>
   );
-}
+};
 
-function renderInlineMarkdown(value: string) {
+const renderInlineMarkdown = (value: string) => {
   const parts = value.split(/(`[^`]+`)/g);
 
   return parts.map((part, index) => {
@@ -242,9 +242,9 @@ function renderInlineMarkdown(value: string) {
 
     return <span key={`${part}-${index}`}>{part}</span>;
   });
-}
+};
 
-function highlightNodeLine(line: string) {
+const highlightNodeLine = (line: string) => {
   const tokens = line.split(
     /(\b(?:const|let|var|function|return|import|from|export|async|await|type|interface|class|new|if|else|throw|try|catch)\b|"[^"]*"|'[^']*'|`[^`]*`|\/\/.*)/g
   );
@@ -266,9 +266,9 @@ function highlightNodeLine(line: string) {
 
     return <span key={key}>{token}</span>;
   });
-}
+};
 
-function getFileLanguage(filePath: string | null) {
+const getFileLanguage = (filePath: string | null) => {
   const extension = filePath?.split(".").pop()?.toLowerCase();
 
   if (!extension) {
@@ -294,20 +294,20 @@ function getFileLanguage(filePath: string | null) {
   };
 
   return labels[extension] ?? extension.toUpperCase();
-}
+};
 
-function getLanguageLabel(language: string) {
+const getLanguageLabel = (language: string) => {
   return getFileLanguage(`file.${language.toLowerCase()}`);
-}
+};
 
 type emptyStateProps = {
   message: string;
 };
 
-function EmptyState({ message }: emptyStateProps) {
+const EmptyState = ({ message }: emptyStateProps) => {
   return (
     <div className="flex h-full items-center justify-center rounded-md border bg-card p-4 text-sm text-muted-foreground">
       {message}
     </div>
   );
-}
+};

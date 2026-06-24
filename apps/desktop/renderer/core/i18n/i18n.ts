@@ -278,13 +278,13 @@ export const resources = {
   }
 } as const;
 
-function getInitialLanguage() {
+const getInitialLanguage = () => {
   if (typeof navigator === "undefined") {
     return "en";
   }
 
   return navigator.language.toLowerCase().startsWith("ko") ? "ko" : "en";
-}
+};
 
 void i18n.use(initReactI18next).init({
   resources,

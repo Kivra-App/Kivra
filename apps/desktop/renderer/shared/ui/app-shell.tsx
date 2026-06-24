@@ -13,7 +13,7 @@ type appShellProps = {
   children: ReactNode;
 };
 
-export function AppShell({ children }: appShellProps) {
+export const AppShell = ({ children }: appShellProps) => {
   const { t } = useTranslation();
   const authUser = useAuthUser();
   const signOut = useSignOut();
@@ -99,7 +99,7 @@ export function AppShell({ children }: appShellProps) {
       </motion.main>
     </div>
   );
-}
+};
 
 type navProjectLinkProps = {
   children: ReactNode;
@@ -110,12 +110,12 @@ type navProjectLinkProps = {
 
 type projectTab = "explorer" | "runs" | "errors" | "knowledge" | "settings";
 
-function NavProjectLink({
+const NavProjectLink = ({
   children,
   projectId,
   search,
   title
-}: navProjectLinkProps) {
+}: navProjectLinkProps) => {
   if (!projectId) {
     return (
       <div
@@ -139,4 +139,4 @@ function NavProjectLink({
       {children}
     </Link>
   );
-}
+};

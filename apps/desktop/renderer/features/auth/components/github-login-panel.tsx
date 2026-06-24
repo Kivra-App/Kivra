@@ -10,7 +10,7 @@ import {
 } from "@/features/auth/hooks/use-auth";
 import { Button } from "@/shared/ui/button";
 
-export function GithubLoginPanel() {
+export const GithubLoginPanel = () => {
   const { t } = useTranslation();
   const authUser = useAuthUser();
   const githubLogin = useGithubLogin();
@@ -19,14 +19,14 @@ export function GithubLoginPanel() {
   const [loginStarted, setLoginStarted] = useState(false);
   const isLoginInProgress = loginStarted || githubLogin.isPending;
 
-  function handleGithubLogin() {
+  const handleGithubLogin = () => {
     setLoginStarted(true);
     githubLogin.mutate(undefined, {
       onError: () => {
         setLoginStarted(false);
       }
     });
-  }
+  };
 
   if (!isConfigured) {
     return (
@@ -120,4 +120,4 @@ export function GithubLoginPanel() {
       )}
     </div>
   );
-}
+};

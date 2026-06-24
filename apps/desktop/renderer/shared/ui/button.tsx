@@ -21,13 +21,13 @@ const sizeClassName = {
   icon: "h-8 w-8 p-0"
 };
 
-export function Button({
+export const Button = ({
   className,
   variant = "secondary",
   size = "md",
   children,
   ...props
-}: buttonProps) {
+}: buttonProps) => {
   return (
     <button
       className={cn(
@@ -41,4 +41,4 @@ export function Button({
       {children}
     </button>
   );
-}
+};

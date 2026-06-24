@@ -7,21 +7,19 @@ import {
   registerProject
 } from "@/features/project/services/project-service";
 
-export function useProjects() {
-  return useQuery({
+export const useProjects = () =>
+  useQuery({
     queryKey: ["projects"],
     queryFn: getProjects
   });
-}
 
-export function useProject(projectId: string) {
-  return useQuery({
+export const useProject = (projectId: string) =>
+  useQuery({
     queryKey: ["projects", projectId],
     queryFn: () => getProject(projectId)
   });
-}
 
-export function useRegisterProject() {
+export const useRegisterProject = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -30,9 +28,9 @@ export function useRegisterProject() {
       void queryClient.invalidateQueries({ queryKey: ["projects"] });
     }
   });
-}
+};
 
-export function useImportGithubProject() {
+export const useImportGithubProject = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -41,4 +39,4 @@ export function useImportGithubProject() {
       void queryClient.invalidateQueries({ queryKey: ["projects"] });
     }
   });
-}
+};

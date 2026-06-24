@@ -3,11 +3,9 @@ import type { resolutionNote } from "@/features/docs/types/note";
 
 const storagePrefix = "kivra.notes";
 
-function getStorageKey(projectId: string) {
-  return `${storagePrefix}.${projectId}`;
-}
+const getStorageKey = (projectId: string) => `${storagePrefix}.${projectId}`;
 
-function parseNotes(rawNotes: string | null): resolutionNote[] {
+const parseNotes = (rawNotes: string | null): resolutionNote[] => {
   if (!rawNotes) {
     return [];
   }
@@ -17,25 +15,26 @@ function parseNotes(rawNotes: string | null): resolutionNote[] {
   } catch {
     return [];
   }
-}
+};
 
-export function getProjectNotes(projectId: string): resolutionNote[] {
-  return parseNotes(window.localStorage.getItem(getStorageKey(projectId)));
-}
+export const getProjectNotes = (projectId: string): resolutionNote[] =>
+  parseNotes(window.localStorage.getItem(getStorageKey(projectId)));
 
-export function getResolvedErrorIds(projectId: string): Set<string> {
-  return new Set(
+export const getResolvedErrorIds = (projectId: string): Set<string> =>
+  new Set(
     getProjectNotes(projectId)
       .filter((note) => note.content.trim().length > 0)
       .map((note) => note.errorId)
   );
-}
 
-function writeProjectNotes(projectId: string, notes: resolutionNote[]) {
+const writeProjectNotes = (projectId: string, notes: resolutionNote[]) => {
   window.localStorage.setItem(getStorageKey(projectId), JSON.stringify(notes));
-}
+};
 
-function mergeNotes(localNotes: resolutionNote[], syncedNotes: resolutionNote[]) {
+const mergeNotes = (
+  localNotes: resolutionNote[],
+  syncedNotes: resolutionNote[]
+) => {
   const noteMap = new Map<string, resolutionNote>();
 
   for (const syncedNote of syncedNotes) {
@@ -50,9 +49,11 @@ function mergeNotes(localNotes: resolutionNote[], syncedNotes: resolutionNote[])
     (firstNote, secondNote) =>
       new Date(secondNote.updatedAt).getTime() - new Date(firstNote.updatedAt).getTime()
   );
-}
+};
 
-export async function getMergedProjectNotes(projectId: string): Promise<resolutionNote[]> {
+export const getMergedProjectNotes = async (
+  projectId: string
+): Promise<resolutionNote[]> => {
   const localNotes = getProjectNotes(projectId);
   const syncedNotes = await fetchSyncedNotes(projectId);
   const nextNotes = mergeNotes(localNotes, syncedNotes);
@@ -62,23 +63,20 @@ export async function getMergedProjectNotes(projectId: string): Promise<resoluti
   }
 
   return nextNotes;
-}
+};
 
-export function getErrorNote(args: {
+export const getErrorNote = (args: {
   errorId: string;
   projectId: string;
-}): resolutionNote | null {
-  return (
-    getProjectNotes(args.projectId).find((note) => note.errorId === args.errorId) ??
-    null
-  );
-}
+}): resolutionNote | null =>
+  getProjectNotes(args.projectId).find((note) => note.errorId === args.errorId) ??
+  null;
 
-export function saveErrorNote(args: {
+export const saveErrorNote = (args: {
   content: string;
   errorId: string;
   projectId: string;
-}): resolutionNote {
+}): resolutionNote => {
   const notes = getProjectNotes(args.projectId);
   const existingNote = notes.find((note) => note.errorId === args.errorId);
   const now = new Date().toISOString();
@@ -99,4 +97,4 @@ export function saveErrorNote(args: {
   void syncNote(nextNote);
 
   return nextNote;
-}
+};

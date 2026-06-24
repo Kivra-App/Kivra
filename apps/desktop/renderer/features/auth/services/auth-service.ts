@@ -7,7 +7,7 @@ export type authUser = {
   avatarUrl: string | null;
 };
 
-export async function getCurrentUser(): Promise<authUser | null> {
+export const getCurrentUser = async (): Promise<authUser | null> => {
   if (!supabase) {
     return null;
   }
@@ -39,9 +39,9 @@ export async function getCurrentUser(): Promise<authUser | null> {
   });
 
   return user;
-}
+};
 
-export async function signInWithGithub() {
+export const signInWithGithub = async () => {
   if (!supabase) {
     throw new Error("SUPABASE_CONFIG_REQUIRED");
   }
@@ -56,9 +56,9 @@ export async function signInWithGithub() {
   if (error) {
     throw error;
   }
-}
+};
 
-export async function getGithubAccessToken(): Promise<string | null> {
+export const getGithubAccessToken = async (): Promise<string | null> => {
   if (!supabase) {
     return null;
   }
@@ -70,12 +70,12 @@ export async function getGithubAccessToken(): Promise<string | null> {
   }
 
   return data.session.provider_token;
-}
+};
 
-export async function signOut() {
+export const signOut = async () => {
   if (!supabase) {
     return;
   }
 
   await supabase.auth.signOut();
-}
+};

@@ -13,7 +13,7 @@ import { selectProjectFolder } from "@/features/project/services/project-dialog-
 import type { githubRepository } from "@/features/project/services/github-project-service";
 import { Button } from "@/shared/ui/button";
 
-export function ProjectRegistration() {
+export const ProjectRegistration = () => {
   const { t } = useTranslation();
   const [projectPath, setProjectPath] = useState("");
   const registerProject = useRegisterProject();
@@ -23,7 +23,7 @@ export function ProjectRegistration() {
   const [folderPickerError, setFolderPickerError] = useState<string | null>(null);
   const [showGithubRepos, setShowGithubRepos] = useState(false);
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     if (!projectPath.trim() || !canUseNativeActions) {
@@ -33,9 +33,9 @@ export function ProjectRegistration() {
     registerProject.mutate(projectPath.trim(), {
       onSuccess: () => setProjectPath("")
     });
-  }
+  };
 
-  async function handleSelectFolder() {
+  const handleSelectFolder = async () => {
     setFolderPickerError(null);
 
     try {
@@ -52,16 +52,16 @@ export function ProjectRegistration() {
         error instanceof Error ? error.message : "PROJECT_FOLDER_SELECT_FAILED"
       );
     }
-  }
+  };
 
-  async function handleLoadGithubRepos() {
+  const handleLoadGithubRepos = async () => {
     setShowGithubRepos(true);
     await githubRepositories.refetch();
-  }
+  };
 
-  function handleImportGithubProject(repo: githubRepository) {
+  const handleImportGithubProject = (repo: githubRepository) => {
     importGithubProject.mutate(repo);
-  }
+  };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
@@ -186,4 +186,4 @@ export function ProjectRegistration() {
       )}
     </form>
   );
-}
+};

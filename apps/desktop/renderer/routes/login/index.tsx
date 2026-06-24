@@ -8,7 +8,7 @@ import { useAuthUser, useGithubLogin } from "@/features/auth";
 import { Button } from "@/shared/ui/button";
 import { Logo } from "@/shared/ui/logo";
 
-export function LoginRoute() {
+export const LoginRoute = () => {
   const { t } = useTranslation();
   const authUser = useAuthUser();
   const githubLogin = useGithubLogin();
@@ -16,14 +16,14 @@ export function LoginRoute() {
   const [loginStarted, setLoginStarted] = useState(false);
   const isLoginInProgress = loginStarted || githubLogin.isPending;
 
-  function handleGithubLogin() {
+  const handleGithubLogin = () => {
     setLoginStarted(true);
     githubLogin.mutate(undefined, {
       onError: () => {
         setLoginStarted(false);
       }
     });
-  }
+  };
 
   return (
     <motion.div
@@ -114,9 +114,9 @@ export function LoginRoute() {
       </aside>
     </motion.div>
   );
-}
+};
 
-function LoginProgress() {
+const LoginProgress = () => {
   const { t } = useTranslation();
 
   return (
@@ -132,14 +132,17 @@ function LoginProgress() {
       </ol>
     </div>
   );
-}
+};
 
 type loginProgressStepProps = {
   active?: boolean;
   children: string;
 };
 
-function LoginProgressStep({ active = false, children }: loginProgressStepProps) {
+const LoginProgressStep = ({
+  active = false,
+  children
+}: loginProgressStepProps) => {
   return (
     <li className="flex items-center gap-2">
       <span
@@ -150,18 +153,18 @@ function LoginProgressStep({ active = false, children }: loginProgressStepProps)
       {children}
     </li>
   );
-}
+};
 
 type authPrincipleProps = {
   detail: string;
   label: string;
 };
 
-function AuthPrinciple({ detail, label }: authPrincipleProps) {
+const AuthPrinciple = ({ detail, label }: authPrincipleProps) => {
   return (
     <div className="border-r p-3 last:border-r-0">
       <div className="font-mono text-xs text-foreground">{label}</div>
       <div className="mt-2 text-xs leading-5 text-muted-foreground">{detail}</div>
     </div>
   );
-}
+};

@@ -9,7 +9,7 @@ type projectTableProps = {
   projects: project[];
 };
 
-export function ProjectTable({ projects }: projectTableProps) {
+export const ProjectTable = ({ projects }: projectTableProps) => {
   const { t } = useTranslation();
   const setSelectedProjectId = useProjectStore((store) => store.setSelectedProjectId);
 
@@ -75,4 +75,4 @@ export function ProjectTable({ projects }: projectTableProps) {
       </table>
     </motion.div>
   );
-}
+};

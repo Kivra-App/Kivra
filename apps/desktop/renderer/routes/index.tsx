@@ -6,7 +6,7 @@ import { useTranslation } from "react-i18next";
 import { ProjectRegistration, ProjectTable, useProjects } from "@/features/project";
 import { useRunMetrics } from "@/features/run";
 
-export function DashboardRoute() {
+export const DashboardRoute = () => {
   const { t } = useTranslation();
   const projects = useProjects();
   const projectIds = projects.data?.map((project) => project.id) ?? [];
@@ -58,12 +58,12 @@ export function DashboardRoute() {
       <ProjectTable projects={projects.data ?? []} />
     </motion.div>
   );
-}
+};
 
 type metricPanelProps = {
   children: ReactNode;
 };
 
-function MetricPanel({ children }: metricPanelProps) {
-  return <div className="border-r p-3 last:border-r-0">{children}</div>;
-}
+const MetricPanel = ({ children }: metricPanelProps) => (
+  <div className="border-r p-3 last:border-r-0">{children}</div>
+);

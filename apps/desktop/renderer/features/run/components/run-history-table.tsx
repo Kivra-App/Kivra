@@ -10,11 +10,11 @@ type runHistoryTableProps = {
   selectedRun: runResult | null;
 };
 
-export function RunHistoryTable({
+export const RunHistoryTable = ({
   onSelectRun,
   runs,
   selectedRun
-}: runHistoryTableProps) {
+}: runHistoryTableProps) => {
   const { t } = useTranslation();
 
   if (runs.length === 0) {
@@ -69,4 +69,4 @@ export function RunHistoryTable({
       </table>
     </motion.div>
   );
-}
+};

@@ -3,15 +3,13 @@ export type appEnv = {
   supabaseUrl: string;
 };
 
-export function getAppEnv(): appEnv {
-  return {
-    supabaseUrl: import.meta.env.VITE_SUPABASE_URL ?? "",
-    supabaseAnonKey: import.meta.env.VITE_SUPABASE_ANON_KEY ?? ""
-  };
-}
+export const getAppEnv = (): appEnv => ({
+  supabaseUrl: import.meta.env.VITE_SUPABASE_URL ?? "",
+  supabaseAnonKey: import.meta.env.VITE_SUPABASE_ANON_KEY ?? ""
+});
 
-export function hasSupabaseConfig() {
+export const hasSupabaseConfig = () => {
   const env = getAppEnv();
 
   return Boolean(env.supabaseUrl && env.supabaseAnonKey);
-}
+};

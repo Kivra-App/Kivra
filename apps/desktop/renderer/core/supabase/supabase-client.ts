@@ -2,7 +2,7 @@ import { createClient } from "@supabase/supabase-js";
 
 import { getAppEnv, hasSupabaseConfig } from "@/core/config/env";
 
-export function createSupabaseClient() {
+export const createSupabaseClient = () => {
   if (!hasSupabaseConfig()) {
     return null;
   }
@@ -15,6 +15,6 @@ export function createSupabaseClient() {
       autoRefreshToken: true
     }
   });
-}
+};
 
 export const supabase = createSupabaseClient();

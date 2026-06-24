@@ -10,12 +10,12 @@ type errorTableProps = {
   selectedError: detectedError | null;
 };
 
-export function ErrorTable({
+export const ErrorTable = ({
   errors,
   onSelectError,
   resolvedErrorIds = new Set(),
   selectedError
-}: errorTableProps) {
+}: errorTableProps) => {
   const { t } = useTranslation();
 
   if (errors.length === 0) {
@@ -85,4 +85,4 @@ export function ErrorTable({
       </table>
     </motion.div>
   );
-}
+};

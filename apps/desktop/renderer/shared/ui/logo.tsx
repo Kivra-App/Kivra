@@ -28,13 +28,13 @@ const sizeClassName = {
   }
 };
 
-export function Logo({
+export const Logo = ({
   className,
   markClassName,
   showTagline = false,
   size = "md",
   variant = "horizontal"
-}: logoProps) {
+}: logoProps) => {
   const classes = sizeClassName[size];
 
   if (variant === "wordmark") {
@@ -67,13 +67,13 @@ export function Logo({
       </div>
     </div>
   );
-}
+};
 
 type classNameProps = {
   className?: string;
 };
 
-function LogoMark({ className }: classNameProps) {
+const LogoMark = ({ className }: classNameProps) => {
   return (
     <img
       src={logoMarkUrl}
@@ -82,9 +82,9 @@ function LogoMark({ className }: classNameProps) {
       draggable={false}
     />
   );
-}
+};
 
-function Wordmark({ className }: classNameProps) {
+const Wordmark = ({ className }: classNameProps) => {
   return (
     <div
       className={cn(
@@ -95,9 +95,9 @@ function Wordmark({ className }: classNameProps) {
       Kivra
     </div>
   );
-}
+};
 
-function Tagline({ className }: classNameProps) {
+const Tagline = ({ className }: classNameProps) => {
   return (
     <div
       className={cn(
@@ -108,4 +108,4 @@ function Tagline({ className }: classNameProps) {
       Build. Fail. Remember.
     </div>
   );
-}
+};

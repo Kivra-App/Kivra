@@ -2,7 +2,7 @@ import { open } from "@tauri-apps/plugin-dialog";
 
 import { isTauriRuntime } from "@/core/tauri/tauri-client";
 
-export async function selectProjectFolder(): Promise<string | null> {
+export const selectProjectFolder = async (): Promise<string | null> => {
   if (!isTauriRuntime()) {
     throw new Error("DESKTOP_RUNTIME_REQUIRED");
   }
@@ -14,4 +14,4 @@ export async function selectProjectFolder(): Promise<string | null> {
   });
 
   return typeof selectedPath === "string" ? selectedPath : null;
-}
+};

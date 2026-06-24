@@ -8,7 +8,7 @@ type runLogPanelProps = {
   run: runResult | null;
 };
 
-export function RunLogPanel({ run }: runLogPanelProps) {
+export const RunLogPanel = ({ run }: runLogPanelProps) => {
   const { t } = useTranslation();
 
   if (!run) {
@@ -53,7 +53,7 @@ export function RunLogPanel({ run }: runLogPanelProps) {
             {t("runs.detectedErrors")}
           </div>
           <div className="space-y-2">
-            {run.errors.map((error, index) => (
+            {run.errors.map((error) => (
               <div
                 key={error.id}
                 className="rounded-md border bg-background p-3"
@@ -70,7 +70,7 @@ export function RunLogPanel({ run }: runLogPanelProps) {
       )}
     </motion.div>
   );
-}
+};
 
 type outputBlockProps = {
   label: string;
@@ -78,7 +78,7 @@ type outputBlockProps = {
   value: string;
 };
 
-function OutputBlock({ label, tone = "default", value }: outputBlockProps) {
+const OutputBlock = ({ label, tone = "default", value }: outputBlockProps) => {
   const { t } = useTranslation();
   const content = value.trim() || t("runs.noOutput");
 
@@ -98,4 +98,4 @@ function OutputBlock({ label, tone = "default", value }: outputBlockProps) {
       </pre>
     </div>
   );
-}
+};

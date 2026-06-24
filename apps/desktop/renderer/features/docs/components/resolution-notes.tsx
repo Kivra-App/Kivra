@@ -16,11 +16,11 @@ type resolutionNotesProps = {
   projectId: string;
 };
 
-export function ResolutionNotes({
+export const ResolutionNotes = ({
   error,
   onNoteSaved,
   projectId
-}: resolutionNotesProps) {
+}: resolutionNotesProps) => {
   const { t } = useTranslation();
   const [content, setContent] = useState(() =>
     error ? getErrorNote({ errorId: error.id, projectId })?.content ?? "" : ""
@@ -30,7 +30,7 @@ export function ResolutionNotes({
     setContent(error ? getErrorNote({ errorId: error.id, projectId })?.content ?? "" : "");
   }, [error, projectId]);
 
-  function handleSave() {
+  const handleSave = () => {
     if (!error) {
       return;
     }
@@ -41,7 +41,7 @@ export function ResolutionNotes({
       projectId
     });
     onNoteSaved?.();
-  }
+  };
 
   if (!error) {
     return (
@@ -92,18 +92,18 @@ export function ResolutionNotes({
       </Button>
     </motion.div>
   );
-}
+};
 
 type detailItemProps = {
   label: string;
   value: number | string;
 };
 
-function DetailItem({ label, value }: detailItemProps) {
+const DetailItem = ({ label, value }: detailItemProps) => {
   return (
     <div className="min-w-0 rounded bg-background px-3 py-2">
       <div className="text-muted-foreground">{label}</div>
       <div className="mt-1 truncate font-mono">{value}</div>
     </div>
   );
-}
+};

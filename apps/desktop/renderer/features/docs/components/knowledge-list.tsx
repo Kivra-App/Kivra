@@ -15,11 +15,11 @@ type knowledgeListProps = {
   projectId: string;
 };
 
-export function KnowledgeList({
+export const KnowledgeList = ({
   errors,
   refreshKey = 0,
   projectId
-}: knowledgeListProps) {
+}: knowledgeListProps) => {
   const { t } = useTranslation();
   const [query, setQuery] = useState("");
   const [notes, setNotes] = useState<resolutionNote[]>(() =>
@@ -31,13 +31,13 @@ export function KnowledgeList({
 
     setNotes(getProjectNotes(projectId));
 
-    async function loadNotes() {
+    const loadNotes = async () => {
       const nextNotes = await getMergedProjectNotes(projectId);
 
       if (isActive) {
         setNotes(nextNotes);
       }
-    }
+    };
 
     void loadNotes();
 
@@ -102,4 +102,4 @@ export function KnowledgeList({
       )}
     </div>
   );
-}
+};

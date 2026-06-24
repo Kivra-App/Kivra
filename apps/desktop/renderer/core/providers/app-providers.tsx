@@ -17,16 +17,16 @@ type appProvidersProps = {
   children: ReactNode;
 };
 
-export function AppProviders({ children }: appProvidersProps) {
+export const AppProviders = ({ children }: appProvidersProps) => {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthSessionBridge />
       {children}
     </QueryClientProvider>
   );
-}
+};
 
-function AuthSessionBridge() {
+const AuthSessionBridge = () => {
   useEffect(() => {
     if (!supabase) {
       return undefined;
@@ -45,4 +45,4 @@ function AuthSessionBridge() {
   }, []);
 
   return null;
-}
+};
