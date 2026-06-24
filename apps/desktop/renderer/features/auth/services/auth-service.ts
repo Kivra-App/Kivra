@@ -2,7 +2,7 @@ import { supabase } from "@/core/supabase/supabase-client";
 import { syncUserProfile } from "@/core/supabase/sync-service";
 import { invokeCommand, isTauriRuntime } from "@/core/tauri/tauri-client";
 
-const authCallbackUrl = "kivra://auth/callback";
+const loopbackAuthCallbackUrl = "http://localhost:3000";
 
 export type authUser = {
   id: string;
@@ -64,10 +64,11 @@ export const signInWithGithub = async () => {
     return;
   }
 
+  const callbackUrlPromise = invokeCommand<string>("wait_for_auth_callback");
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "github",
     options: {
-      redirectTo: authCallbackUrl,
+      redirectTo: loopbackAuthCallbackUrl,
       skipBrowserRedirect: true
     }
   });
@@ -81,6 +82,7 @@ export const signInWithGithub = async () => {
   }
 
   await invokeCommand("open_external_url", { url: data.url });
+  await handleAuthCallbackUrl(await callbackUrlPromise);
 };
 
 export const handleAuthCallbackUrl = async (url: string): Promise<boolean> => {
@@ -141,9 +143,10 @@ const parseAuthCallbackUrl = (url: string) => {
   try {
     const callbackUrl = new URL(url);
     const isAuthCallback =
-      callbackUrl.protocol === "kivra:" &&
-      callbackUrl.hostname === "auth" &&
-      callbackUrl.pathname === "/callback";
+      (callbackUrl.protocol === "kivra:" &&
+        callbackUrl.hostname === "auth" &&
+        callbackUrl.pathname === "/callback") ||
+      callbackUrl.origin === loopbackAuthCallbackUrl;
 
     return isAuthCallback ? callbackUrl : null;
   } catch {

@@ -3,9 +3,11 @@ use std::{
     collections::HashSet,
     ffi::OsStr,
     fs,
+    io::{Read, Write},
+    net::{TcpListener, TcpStream},
     path::{Path, PathBuf},
     process::Command,
-    time::Instant,
+    time::{Duration, Instant},
 };
 use thiserror::Error;
 
@@ -25,6 +27,8 @@ enum KivraError {
     FileOutsideProject,
     #[error("Only HTTPS URLs can be opened externally")]
     InvalidExternalUrl,
+    #[error("Unable to receive auth callback: {0}")]
+    AuthCallback(String),
 }
 
 impl Serialize for KivraError {
@@ -170,6 +174,69 @@ fn open_external_url(url: String) -> Result<(), KivraError> {
             String::from_utf8_lossy(&output.stderr).to_string(),
         ))
     }
+}
+
+#[tauri::command]
+async fn wait_for_auth_callback() -> Result<String, KivraError> {
+    tauri::async_runtime::spawn_blocking(wait_for_loopback_auth_callback)
+        .await
+        .map_err(|error| KivraError::AuthCallback(error.to_string()))?
+}
+
+fn wait_for_loopback_auth_callback() -> Result<String, KivraError> {
+    let listener = TcpListener::bind("127.0.0.1:3000")
+        .map_err(|error| KivraError::AuthCallback(error.to_string()))?;
+    listener
+        .set_nonblocking(true)
+        .map_err(|error| KivraError::AuthCallback(error.to_string()))?;
+
+    let started_at = Instant::now();
+
+    loop {
+        match listener.accept() {
+            Ok((stream, _)) => return read_auth_callback_request(stream),
+            Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {
+                if started_at.elapsed() > Duration::from_secs(120) {
+                    return Err(KivraError::AuthCallback(
+                        "Timed out waiting for OAuth redirect".to_string(),
+                    ));
+                }
+
+                std::thread::sleep(Duration::from_millis(100));
+            }
+            Err(error) => return Err(KivraError::AuthCallback(error.to_string())),
+        }
+    }
+}
+
+fn read_auth_callback_request(mut stream: TcpStream) -> Result<String, KivraError> {
+    let mut buffer = [0_u8; 4096];
+    let byte_count = stream
+        .read(&mut buffer)
+        .map_err(|error| KivraError::AuthCallback(error.to_string()))?;
+    let request = String::from_utf8_lossy(&buffer[..byte_count]);
+    let request_target = request
+        .lines()
+        .next()
+        .and_then(|line| line.split_whitespace().nth(1))
+        .ok_or_else(|| KivraError::AuthCallback("Invalid OAuth callback request".to_string()))?;
+
+    let response = concat!(
+        "HTTP/1.1 200 OK\r\n",
+        "Content-Type: text/html; charset=utf-8\r\n",
+        "Connection: close\r\n",
+        "\r\n",
+        "<!doctype html><html><body>",
+        "<script>window.close()</script>",
+        "Authentication complete. You can return to Kivra.",
+        "</body></html>"
+    );
+
+    stream
+        .write_all(response.as_bytes())
+        .map_err(|error| KivraError::AuthCallback(error.to_string()))?;
+
+    Ok(format!("http://localhost:3000{request_target}"))
 }
 
 #[tauri::command]
@@ -513,6 +580,7 @@ pub fn run() {
             scan_project,
             read_project_directory,
             open_external_url,
+            wait_for_auth_callback,
             run_project_command,
             read_project_file
         ])
