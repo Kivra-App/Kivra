@@ -257,7 +257,7 @@ Repository Structure
 
 apps
 ├─ desktop
-│  ├─ ui
+│  ├─ renderer
 │  │  ├─ core
 │  │  ├─ features
 │  │  ├─ routes
@@ -273,7 +273,7 @@ packages
 
 Do not place application source code in the repository root.
 
-Desktop UI source belongs in apps/desktop/ui.
+Desktop renderer source belongs in apps/desktop/renderer.
 
 Desktop native source belongs in apps/desktop/native.
 
@@ -283,7 +283,7 @@ Core Layer
 
 Contains application-wide concerns.
 
-ui/core
+renderer/core
 ├─ auth
 ├─ database
 ├─ tauri
@@ -297,7 +297,7 @@ Feature Layer
 
 Each feature owns its logic.
 
-ui/features
+renderer/features
 ├─ project
 ├─ run
 ├─ error
@@ -323,7 +323,7 @@ Shared Layer
 
 Reusable code only.
 
-ui/shared
+renderer/shared
 ├─ ui
 ├─ hooks
 ├─ utils

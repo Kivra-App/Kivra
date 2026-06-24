@@ -155,7 +155,7 @@ Display local project structure.
 
 Example
 
-apps/desktop/ui
+apps/desktop/renderer
 ├─ features
 ├─ shared
 ├─ routes
@@ -266,7 +266,7 @@ Extract
 
 Example
 
-apps/desktop/ui/features/project/index.ts
+apps/desktop/renderer/features/project/index.ts
 Line 42
 Column 13
 

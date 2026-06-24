@@ -6,7 +6,7 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "ui")
+      "@": path.resolve(__dirname, "renderer")
     }
   },
   server: {

@@ -73,7 +73,7 @@ Use only:
 
 apps
 └─ desktop
-   ├─ ui
+   ├─ renderer
    │  ├─ core
    │  ├─ features
    │  ├─ routes
@@ -90,7 +90,7 @@ All business logic must live inside feature modules.
 
 Do not place app source code in the repository root.
 
-Use apps/desktop/ui for React application code.
+Use apps/desktop/renderer for React renderer application code.
 
 Use apps/desktop/native for Rust native application code.
 
