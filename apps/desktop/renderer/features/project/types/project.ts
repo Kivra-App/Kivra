@@ -31,6 +31,10 @@ export type project = {
   tree: projectNode;
 };
 
+export type githubBranch = {
+  name: string;
+};
+
 export type projectFile = {
   path: string;
   content: string;

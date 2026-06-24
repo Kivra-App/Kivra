@@ -1,13 +1,22 @@
 import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { AnimatePresence, motion } from "framer-motion";
+import { BookOpenText, FolderGit2, GitBranch, Loader2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { KnowledgeList, ProjectMemo, ResolutionNotes } from "@/features/docs";
 import { getResolvedErrorIds } from "@/features/docs/services/note-service";
 import { ErrorTable, type detectedError } from "@/features/error";
-import { ProjectExplorer, ProjectFileViewer, useProject } from "@/features/project";
+import {
+  ProjectExplorer,
+  ProjectFileViewer,
+  useConnectGithubProjectToLocalFolder,
+  useGithubProjectBranches,
+  useProject,
+  useSwitchGithubProjectBranch
+} from "@/features/project";
 import { readProjectDirectory } from "@/features/project/services/project-directory-service";
+import { selectProjectFolder } from "@/features/project/services/project-dialog-service";
 import { useProjectStore } from "@/features/project/stores/project-store";
 import {
   CommandRunner,
@@ -17,6 +26,8 @@ import {
 } from "@/features/run";
 import type { runResult } from "@/features/run";
 import { cn } from "@/shared/lib/utils";
+import { Button } from "@/shared/ui/button";
+import { Select, type selectOption } from "@/shared/ui/select";
 
 type projectTab = "explorer" | "runs" | "errors" | "knowledge" | "settings";
 
@@ -28,6 +39,8 @@ export const ProjectRoute = () => {
   const search = useSearch({ from: "/projects/$projectId" });
   const navigate = useNavigate({ from: "/projects/$projectId" });
   const project = useProject(projectId);
+  const connectLocalFolder = useConnectGithubProjectToLocalFolder();
+  const switchGithubBranch = useSwitchGithubProjectBranch();
   const setSelectedProjectId = useProjectStore((store) => store.setSelectedProjectId);
   const activeTab = search.tab;
   const { runs, addRun } = useRunHistory(projectId);
@@ -43,6 +56,11 @@ export const ProjectRoute = () => {
     () => getResolvedErrorIds(projectId),
     [projectId, notesVersion]
   );
+  const isGithubProject = project.data?.source === "github";
+  const githubBranches = useGithubProjectBranches({
+    enabled: Boolean(isGithubProject),
+    projectId
+  });
 
   useEffect(() => {
     setSelectedProjectId(projectId);
@@ -58,6 +76,31 @@ export const ProjectRoute = () => {
 
   const handleTabChange = (tab: projectTab) => {
     void navigate({ search: { tab } });
+  };
+
+  const handleConnectLocalFolder = async () => {
+    const selectedPath = await selectProjectFolder();
+
+    if (!selectedPath) {
+      return;
+    }
+
+    connectLocalFolder.mutate({
+      projectId,
+      projectPath: selectedPath
+    });
+  };
+
+  const handleBranchChange = (branch: string) => {
+    if (!branch || branch === project.data?.branch) {
+      return;
+    }
+
+    setSelectedFilePath(null);
+    switchGithubBranch.mutate({
+      branch,
+      projectId
+    });
   };
 
   if (project.isLoading) {
@@ -89,7 +132,20 @@ export const ProjectRoute = () => {
             <Metadata label={t("project.runtime")} value={projectData.runtime} />
             <Metadata label={t("project.framework")} value={projectData.framework} />
             <Metadata label={t("project.package")} value={projectData.packageManager} />
-            <Metadata label={t("project.branch")} value={projectData.branch} />
+            {projectData.source === "github" ? (
+              <BranchMetadata
+                label={t("project.branch")}
+                value={projectData.branch}
+                isLoading={githubBranches.isLoading || switchGithubBranch.isPending}
+                options={getBranchOptions({
+                  currentBranch: projectData.branch,
+                  branches: githubBranches.data ?? []
+                })}
+                onChange={handleBranchChange}
+              />
+            ) : (
+              <Metadata label={t("project.branch")} value={projectData.branch} />
+            )}
             <Metadata
               label={t("project.source")}
               value={
@@ -127,14 +183,61 @@ export const ProjectRoute = () => {
               }}
             />
           ) : (
-            <div className="rounded-md border bg-background px-3 py-2 text-xs text-muted-foreground">
-              {t("project.githubRunDisabled")}
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant={activeTab === "knowledge" ? "primary" : "secondary"}
+                onClick={() => handleTabChange("knowledge")}
+              >
+                <BookOpenText className="h-4 w-4" />
+                {t("project.openMemory")}
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                disabled={connectLocalFolder.isPending}
+                onClick={() => void handleConnectLocalFolder()}
+              >
+                {connectLocalFolder.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <FolderGit2 className="h-4 w-4" />
+                )}
+                {t("project.connectLocalFolder")}
+              </Button>
             </div>
           )}
         </div>
+        {connectLocalFolder.error instanceof Error && (
+          <p className="mt-2 text-xs text-destructive">
+            {connectLocalFolder.error.message}
+          </p>
+        )}
       </header>
 
       <section className="min-h-0 flex-1 overflow-auto p-4">
+        {projectData.source === "github" && (
+          <section className="mb-3 rounded-md border bg-card p-3">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2 text-sm font-medium">
+                  <BookOpenText className="h-4 w-4" />
+                  {t("project.githubMemoryTitle")}
+                </div>
+                <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                  {t("project.githubMemoryDetail")}
+                </p>
+              </div>
+            </div>
+            {switchGithubBranch.error instanceof Error && (
+              <p className="mt-2 text-xs text-destructive">
+                {switchGithubBranch.error.message}
+              </p>
+            )}
+          </section>
+        )}
         <div className="mb-3 rounded-md border bg-card px-3 py-2">
           <div className="text-xs font-medium">
             {t(`project.tabs.${activeTab}`)}
@@ -233,6 +336,39 @@ type metadataProps = {
   value: string;
 };
 
+type branchMetadataProps = {
+  isLoading: boolean;
+  label: string;
+  onChange: (branch: string) => void;
+  options: selectOption[];
+  value: string;
+};
+
+const BranchMetadata = ({
+  isLoading,
+  label,
+  onChange,
+  options,
+  value
+}: branchMetadataProps) => {
+  return (
+    <div className="min-w-[110px] rounded-md border bg-background px-3 py-2">
+      <div className="text-muted-foreground">{label}</div>
+      <Select
+        aria-label={label}
+        value={value}
+        options={options}
+        icon={<GitBranch className="h-4 w-4 shrink-0 text-muted-foreground" />}
+        isLoading={isLoading}
+        size="sm"
+        className="mt-1 h-7 w-full border-transparent bg-muted px-2"
+        selectClassName="font-mono"
+        onChange={(event) => onChange(event.target.value)}
+      />
+    </div>
+  );
+};
+
 const Metadata = ({ label, value }: metadataProps) => {
   return (
     <div className="min-w-[110px] rounded-md border bg-background px-3 py-2">
@@ -240,4 +376,19 @@ const Metadata = ({ label, value }: metadataProps) => {
       <div className="mt-1 truncate font-mono">{value}</div>
     </div>
   );
+};
+
+const getBranchOptions = ({
+  branches,
+  currentBranch
+}: {
+  branches: Array<{ name: string }>;
+  currentBranch: string;
+}): selectOption[] => {
+  const branchNames = new Set([currentBranch, ...branches.map((branch) => branch.name)]);
+
+  return Array.from(branchNames).map((branchName) => ({
+    label: branchName,
+    value: branchName
+  }));
 };

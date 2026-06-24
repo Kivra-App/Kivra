@@ -1,41 +1,56 @@
-import { FolderOpen, FolderPlus, Github, Loader2 } from "lucide-react";
+import { FolderOpen, FolderPlus, Loader2 } from "lucide-react";
 import type { FormEvent } from "react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { isTauriRuntime } from "@/core/tauri/tauri-client";
-import { useGithubRepositories } from "@/features/project/hooks/use-github-repositories";
-import {
-  useImportGithubProject,
-  useRegisterProject
-} from "@/features/project/hooks/use-projects";
+import { useRegisterProject } from "@/features/project/hooks/use-projects";
 import { selectProjectFolder } from "@/features/project/services/project-dialog-service";
-import type { githubRepository } from "@/features/project/services/github-project-service";
 import { Button } from "@/shared/ui/button";
 
 export const ProjectRegistration = () => {
   const { t } = useTranslation();
   const [projectPath, setProjectPath] = useState("");
   const registerProject = useRegisterProject();
-  const importGithubProject = useImportGithubProject();
-  const githubRepositories = useGithubRepositories();
   const canUseNativeActions = isTauriRuntime();
   const [folderPickerError, setFolderPickerError] = useState<string | null>(null);
-  const [showGithubRepos, setShowGithubRepos] = useState(false);
+  const registrationError = formatProjectError({
+    message: registerProject.error instanceof Error ? registerProject.error.message : null,
+    t
+  });
+  const pickerError = formatProjectError({
+    message: folderPickerError,
+    t
+  });
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-
-    if (!projectPath.trim() || !canUseNativeActions) {
-      return;
-    }
-
-    registerProject.mutate(projectPath.trim(), {
+  const registerSelectedProject = (selectedPath: string) => {
+    registerProject.mutate(selectedPath, {
       onSuccess: () => setProjectPath("")
     });
   };
 
-  const handleSelectFolder = async () => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (!canUseNativeActions || registerProject.isPending) {
+      return;
+    }
+
+    const trimmedPath = projectPath.trim();
+
+    if (trimmedPath) {
+      registerSelectedProject(trimmedPath);
+      return;
+    }
+
+    await handleSelectFolder({ shouldRegister: true });
+  };
+
+  const handleSelectFolder = async ({
+    shouldRegister = false
+  }: {
+    shouldRegister?: boolean;
+  } = {}) => {
     setFolderPickerError(null);
 
     try {
@@ -43,9 +58,10 @@ export const ProjectRegistration = () => {
 
       if (selectedPath) {
         setProjectPath(selectedPath);
-        registerProject.mutate(selectedPath, {
-          onSuccess: () => setProjectPath("")
-        });
+
+        if (shouldRegister) {
+          registerSelectedProject(selectedPath);
+        }
       }
     } catch (error) {
       setFolderPickerError(
@@ -54,30 +70,30 @@ export const ProjectRegistration = () => {
     }
   };
 
-  const handleLoadGithubRepos = async () => {
-    setShowGithubRepos(true);
-    await githubRepositories.refetch();
-  };
-
-  const handleImportGithubProject = (repo: githubRepository) => {
-    importGithubProject.mutate(repo);
-  };
-
   return (
-    <form onSubmit={handleSubmit} className="space-y-3">
-      <div className="flex items-center gap-2">
+    <form
+      onSubmit={handleSubmit}
+      className="rounded-md border bg-card p-4"
+    >
+      <div>
+        <div className="text-sm font-semibold">{t("project.localImportTitle")}</div>
+        <p className="mt-1 text-xs text-muted-foreground">
+          {t("project.localImportDetail")}
+        </p>
+      </div>
+      <div className="mt-4 flex items-center gap-2">
         <input
           value={projectPath}
           onChange={(event) => setProjectPath(event.target.value)}
           placeholder={t("project.pathPlaceholder")}
-          className="h-8 min-w-[360px] rounded-md border bg-background px-3 font-mono text-xs outline-none focus:border-foreground disabled:bg-muted"
+          className="h-9 min-w-0 flex-1 rounded-md border bg-background px-3 font-mono text-xs outline-none focus:border-foreground disabled:bg-muted"
           disabled={!canUseNativeActions}
         />
         <Button
           type="button"
           variant="secondary"
           disabled={registerProject.isPending || !canUseNativeActions}
-          onClick={handleSelectFolder}
+          onClick={() => void handleSelectFolder()}
         >
           <FolderOpen className="h-4 w-4" />
           {t("project.browseFolder")}
@@ -87,103 +103,82 @@ export const ProjectRegistration = () => {
           variant="primary"
           disabled={registerProject.isPending || !canUseNativeActions}
         >
-          <FolderPlus className="h-4 w-4" />
+          {registerProject.isPending ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <FolderPlus className="h-4 w-4" />
+          )}
           {t("project.addProject")}
         </Button>
       </div>
-      <div className="flex items-center gap-2">
-        <Button
-          type="button"
-          variant="secondary"
-          disabled={githubRepositories.isFetching}
-          onClick={handleLoadGithubRepos}
-        >
-          {githubRepositories.isFetching ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Github className="h-4 w-4" />
-          )}
-          {t("project.loadGithubProjects")}
-        </Button>
-        <p className="text-xs text-muted-foreground">
-          {t("project.githubImportDetail")}
-        </p>
-      </div>
-      {showGithubRepos && (
-        <div className="max-h-72 overflow-auto rounded-md border bg-card">
-          {githubRepositories.isFetching && (
-            <div className="flex items-center gap-2 p-3 text-xs text-muted-foreground">
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              {t("project.loadingGithubProjects")}
-            </div>
-          )}
-          {githubRepositories.error instanceof Error && (
-            <p className="p-3 text-xs text-destructive">
-              {githubRepositories.error.message === "GITHUB_TOKEN_REQUIRED"
-                ? t("project.githubTokenRequired")
-                : githubRepositories.error.message}
-            </p>
-          )}
-          {!githubRepositories.isFetching &&
-            githubRepositories.data?.map((repo) => (
-              <button
-                key={repo.id}
-                type="button"
-                className="flex w-full items-center justify-between gap-4 border-b px-3 py-2 text-left last:border-b-0 hover:bg-muted"
-                disabled={importGithubProject.isPending}
-                onClick={() => handleImportGithubProject(repo)}
-              >
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2 text-sm font-medium">
-                    <Github className="h-4 w-4 shrink-0" />
-                    <span className="truncate">{repo.fullName}</span>
-                    {repo.private && (
-                      <span className="rounded border px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
-                        private
-                      </span>
-                    )}
-                  </div>
-                  <div className="mt-1 truncate text-xs text-muted-foreground">
-                    {repo.description ?? repo.htmlUrl}
-                  </div>
-                </div>
-                <div className="shrink-0 text-right font-mono text-xs text-muted-foreground">
-                  <div>{repo.defaultBranch}</div>
-                  <div>{repo.language ?? "repo"}</div>
-                </div>
-              </button>
-            ))}
-          {!githubRepositories.isFetching && githubRepositories.data?.length === 0 && (
-            <p className="p-3 text-xs text-muted-foreground">
-              {t("project.githubProjectsEmpty")}
-            </p>
-          )}
-        </div>
-      )}
-      {importGithubProject.error instanceof Error && (
-        <p className="text-xs text-destructive">
-          {importGithubProject.error.message}
-        </p>
-      )}
+      <p className="mt-3 text-xs text-muted-foreground">
+        {t("project.localImportHint")}
+      </p>
       {!canUseNativeActions && (
-        <p className="text-xs text-muted-foreground">
+        <p className="mt-3 text-xs text-muted-foreground">
           {t("runtime.desktopRequiredDetail")}
         </p>
       )}
-      {registerProject.error instanceof Error && (
-        <p className="text-xs text-destructive">
-          {registerProject.error.message === "DESKTOP_RUNTIME_REQUIRED"
-            ? t("runtime.desktopRequired")
-            : registerProject.error.message}
-        </p>
+      {registrationError && (
+        <ProjectErrorMessage
+          title={registrationError.title}
+          detail={registrationError.detail}
+        />
       )}
-      {folderPickerError && (
-        <p className="text-xs text-destructive">
-          {folderPickerError === "DESKTOP_RUNTIME_REQUIRED"
-            ? t("runtime.desktopRequired")
-            : folderPickerError}
-        </p>
+      {pickerError && (
+        <ProjectErrorMessage title={pickerError.title} detail={pickerError.detail} />
       )}
     </form>
   );
+};
+
+type projectErrorMessageProps = {
+  detail?: string;
+  title: string;
+};
+
+const ProjectErrorMessage = ({ detail, title }: projectErrorMessageProps) => (
+  <div className="mt-3 rounded-md border border-destructive/40 bg-destructive/10 p-3">
+    <div className="text-xs font-medium text-destructive">{title}</div>
+    {detail && (
+      <p className="mt-1 text-xs leading-5 text-muted-foreground">{detail}</p>
+    )}
+  </div>
+);
+
+const formatProjectError = ({
+  message,
+  t
+}: {
+  message: string | null;
+  t: ReturnType<typeof useTranslation>["t"];
+}) => {
+  if (!message) {
+    return null;
+  }
+
+  if (message === "DESKTOP_RUNTIME_REQUIRED") {
+    return {
+      title: t("runtime.desktopRequired"),
+      detail: t("runtime.desktopRequiredDetail")
+    };
+  }
+
+  if (message === "PROJECT_STRUCTURE_UNREADABLE") {
+    return {
+      title: t("project.structureUnreadable"),
+      detail: t("project.structureUnreadableDetail")
+    };
+  }
+
+  if (message.trim().startsWith("[") || message.includes("invalid_type")) {
+    return {
+      title: t("project.structureUnreadable"),
+      detail: t("project.structureUnreadableDetail")
+    };
+  }
+
+  return {
+    title: message
+  };
 };

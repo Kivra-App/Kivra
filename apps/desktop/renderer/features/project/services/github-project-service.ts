@@ -3,6 +3,7 @@ import { z } from "zod";
 import { getGithubAccessToken } from "@/features/auth/services/auth-service";
 import { projectFileSchema } from "@/features/project/schemas/project-schema";
 import type {
+  githubBranch,
   project,
   projectFile,
   projectNode
@@ -42,6 +43,10 @@ type githubTreeResponse = {
   }>;
 };
 
+type githubBranchResponse = {
+  name: string;
+};
+
 type githubContentResponse = {
   content?: string;
   encoding?: string;
@@ -72,6 +77,12 @@ const githubTreeResponseSchema = z.object({
     })
   )
 });
+
+const githubBranchesResponseSchema = z.array(
+  z.object({
+    name: z.string()
+  })
+);
 
 const githubContentResponseSchema = z.object({
   content: z.string().optional(),
@@ -162,6 +173,37 @@ export const hydrateGithubProjectTree = async (
       name: project.name
     })
   };
+};
+
+export const hydrateGithubProjectBranch = async (args: {
+  branch: string;
+  project: project;
+}): Promise<project> => {
+  const repoPath = getRepoPath(args.project);
+
+  return {
+    ...args.project,
+    path: repoPath,
+    branch: args.branch,
+    tree: await fetchGithubProjectTree({
+      defaultBranch: args.branch,
+      fullName: repoPath,
+      name: args.project.name
+    })
+  };
+};
+
+export const fetchGithubProjectBranches = async (
+  project: project
+): Promise<githubBranch[]> => {
+  const repoPath = getRepoPath(project);
+  const branches = githubBranchesResponseSchema.parse(
+    await githubFetch<githubBranchResponse[]>(
+      `/repos/${repoPath}/branches?per_page=100`
+    )
+  );
+
+  return branches.map((branch) => ({ name: branch.name }));
 };
 
 export const readGithubProjectFile = async (args: {

@@ -1,14 +1,29 @@
 import { motion } from "framer-motion";
 import { Activity, AlertTriangle, FolderKanban } from "lucide-react";
 import type { ReactNode } from "react";
+import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
-import { ProjectRegistration, ProjectTable, useProjects } from "@/features/project";
+import {
+  GitHubProjectImport,
+  ProjectRegistration,
+  ProjectTable,
+  useProjects
+} from "@/features/project";
 import { useRunMetrics } from "@/features/run";
 
 export const DashboardRoute = () => {
   const { t } = useTranslation();
   const projects = useProjects();
+  const importedRepositoryUrls = useMemo(
+    () =>
+      new Set(
+        (projects.data ?? [])
+          .map((project) => project.repositoryUrl)
+          .filter((url): url is string => Boolean(url))
+      ),
+    [projects.data]
+  );
   const projectIds = projects.data?.map((project) => project.id) ?? [];
   const runMetrics = useRunMetrics(projectIds);
 
@@ -19,15 +34,19 @@ export const DashboardRoute = () => {
       transition={{ duration: 0.24, ease: "easeOut" }}
       className="space-y-4 p-4"
     >
-      <header className="flex items-start justify-between gap-4">
+      <header>
         <div>
           <h1 className="text-lg font-semibold">{t("dashboard.title")}</h1>
           <p className="text-sm text-muted-foreground">
             {t("dashboard.description")}
           </p>
         </div>
-        <ProjectRegistration />
       </header>
+
+      <section className="grid grid-cols-[minmax(360px,440px)_1fr] gap-4">
+        <ProjectRegistration />
+        <GitHubProjectImport importedRepositoryUrls={importedRepositoryUrls} />
+      </section>
 
       <section className="grid grid-cols-3 overflow-hidden rounded-md border bg-card">
         <MetricPanel>

@@ -18,7 +18,12 @@ export const projectNodeSchema: z.ZodType<projectNode> = z.lazy(() =>
     name: z.string(),
     path: z.string(),
     type: z.enum(["file", "folder"]),
-    children: z.array(projectNodeSchema).optional()
+    children: z
+      .preprocess(
+        (value) => (value === null ? undefined : value),
+        z.array(projectNodeSchema).optional()
+      )
+      .optional()
   })
 );
 

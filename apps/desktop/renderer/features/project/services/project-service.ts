@@ -1,9 +1,11 @@
 import { invokeCommand } from "@/core/tauri/tauri-client";
 import { fetchSyncedProjects, syncProject } from "@/core/supabase/sync-service";
 import { scannedProjectSchema } from "@/features/project/schemas/project-schema";
-import type { project } from "@/features/project/types/project";
+import type { githubBranch, project } from "@/features/project/types/project";
 import {
   createGithubProject,
+  fetchGithubProjectBranches,
+  hydrateGithubProjectBranch,
   hydrateGithubProjectTree,
   type githubRepository
 } from "@/features/project/services/github-project-service";
@@ -15,12 +17,22 @@ import {
 
 type scannedProject = Omit<project, "id" | "createdAt" | "source">;
 
-export const registerProject = async (projectPath: string): Promise<project> => {
-  const scannedProject = scannedProjectSchema.parse(
+const scanProject = async (projectPath: string): Promise<scannedProject> => {
+  const result = scannedProjectSchema.safeParse(
     await invokeCommand<scannedProject>("scan_project", {
       projectPath
     })
   );
+
+  if (!result.success) {
+    throw new Error("PROJECT_STRUCTURE_UNREADABLE");
+  }
+
+  return result.data;
+};
+
+export const registerProject = async (projectPath: string): Promise<project> => {
+  const scannedProject = await scanProject(projectPath);
   const projects = readStoredProjects();
   const existingProject = projects.find((item) => item.path === scannedProject.path);
   const nextProject: project = {
@@ -57,6 +69,71 @@ export const importGithubProject = async (
   ];
 
   writeStoredProjects(nextProjects);
+  void syncProject(nextProject);
+
+  return nextProject;
+};
+
+export const connectGithubProjectToLocalFolder = async (args: {
+  projectId: string;
+  projectPath: string;
+}): Promise<project> => {
+  const scannedProject = await scanProject(args.projectPath);
+  const projects = readStoredProjects();
+  const existingProject = projects.find((item) => item.id === args.projectId);
+
+  if (!existingProject) {
+    throw new Error("PROJECT_NOT_FOUND");
+  }
+
+  const nextProject: project = {
+    ...scannedProject,
+    id: existingProject.id,
+    createdAt: existingProject.createdAt,
+    repositoryUrl:
+      scannedProject.repositoryUrl ?? existingProject.repositoryUrl,
+    source: "local"
+  };
+
+  writeStoredProjects(
+    projects.map((item) => (item.id === nextProject.id ? nextProject : item))
+  );
+  void syncProject(nextProject);
+
+  return nextProject;
+};
+
+export const getGithubProjectBranches = async (
+  projectId: string
+): Promise<githubBranch[]> => {
+  const project = await getProject(projectId);
+
+  if (!project || project.source !== "github") {
+    return [];
+  }
+
+  return fetchGithubProjectBranches(project);
+};
+
+export const switchGithubProjectBranch = async (args: {
+  branch: string;
+  projectId: string;
+}): Promise<project> => {
+  const project = await getProject(args.projectId);
+
+  if (!project || project.source !== "github") {
+    throw new Error("GITHUB_PROJECT_REQUIRED");
+  }
+
+  const nextProject = await hydrateGithubProjectBranch({
+    branch: args.branch,
+    project
+  });
+  const projects = readStoredProjects();
+
+  writeStoredProjects(
+    projects.map((item) => (item.id === nextProject.id ? nextProject : item))
+  );
   void syncProject(nextProject);
 
   return nextProject;

@@ -1,13 +1,18 @@
+export { GitHubProjectImport } from "@/features/project/components/github-project-import";
 export { ProjectExplorer } from "@/features/project/components/project-explorer";
 export { ProjectFileViewer } from "@/features/project/components/project-file-viewer";
 export { ProjectRegistration } from "@/features/project/components/project-registration";
 export { ProjectTable } from "@/features/project/components/project-table";
 export {
+  useConnectGithubProjectToLocalFolder,
+  useGithubProjectBranches,
   useImportGithubProject,
   useProject,
-  useProjects
+  useProjects,
+  useSwitchGithubProjectBranch
 } from "@/features/project/hooks/use-projects";
 export type {
+  githubBranch,
   project,
   projectFile,
   projectMetadata,
