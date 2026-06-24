@@ -1,10 +1,12 @@
-import { ChevronRight, File, Folder } from "lucide-react";
-import { useState } from "react";
+import { ChevronRight, File, Folder, Loader2 } from "lucide-react";
+import { useEffect, useState } from "react";
 
 import type { projectNode } from "@/features/project/types/project";
+import { updateNodeChildren } from "@/features/project/utils/project-tree";
 import { cn } from "@/shared/lib/utils";
 
 type projectExplorerProps = {
+  onLoadDirectory?: (directoryPath: string) => Promise<projectNode[]>;
   onSelectFile: (filePath: string) => void;
   selectedFilePath: string | null;
   tree: projectNode;
@@ -13,17 +15,41 @@ type projectExplorerProps = {
 type projectNodeRowProps = {
   node: projectNode;
   depth: number;
+  loadingPath: string | null;
+  onLoadDirectory?: (directoryPath: string) => Promise<void>;
   onSelectFile: (filePath: string) => void;
   selectedFilePath: string | null;
 };
 
-function ProjectNodeRow({
+const ProjectNodeRow = ({
   node,
   depth,
+  loadingPath,
+  onLoadDirectory,
   onSelectFile,
   selectedFilePath
-}: projectNodeRowProps) {
+}: projectNodeRowProps) => {
   const [isOpen, setIsOpen] = useState(depth < 1);
+  const isLoading = loadingPath === node.path;
+
+  const handleNodeClick = async () => {
+    if (node.type === "file") {
+      onSelectFile(node.path);
+      return;
+    }
+
+    if (isOpen) {
+      setIsOpen(false);
+      return;
+    }
+
+    if (!node.children && onLoadDirectory) {
+      await onLoadDirectory(node.path);
+    }
+
+    setIsOpen(true);
+  };
+
   return (
     <div>
       <button
@@ -33,19 +59,20 @@ function ProjectNodeRow({
           selectedFilePath === node.path && "bg-muted"
         )}
         style={{ paddingLeft: `${depth * 16 + 8}px` }}
+        disabled={isLoading}
         onClick={() => {
-          if (node.type === "file") {
-            onSelectFile(node.path);
-          } else {
-            setIsOpen((value) => !value);
-          }
+          void handleNodeClick();
         }}
       >
         {node.type === "folder" ? (
           <span className="flex h-6 w-6 items-center justify-center">
-            <ChevronRight
-              className={cn("h-4 w-4 transition", isOpen && "rotate-90")}
-            />
+            {isLoading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <ChevronRight
+                className={cn("h-4 w-4 transition", isOpen && "rotate-90")}
+              />
+            )}
           </span>
         ) : (
           <span className="h-6 w-6" />
@@ -63,27 +90,57 @@ function ProjectNodeRow({
             key={childNode.id}
             node={childNode}
             depth={depth + 1}
+            loadingPath={loadingPath}
+            onLoadDirectory={onLoadDirectory}
             onSelectFile={onSelectFile}
             selectedFilePath={selectedFilePath}
           />
         ))}
     </div>
   );
-}
+};
 
-export function ProjectExplorer({
+export const ProjectExplorer = ({
+  onLoadDirectory,
   onSelectFile,
   selectedFilePath,
   tree
-}: projectExplorerProps) {
+}: projectExplorerProps) => {
+  const [visibleTree, setVisibleTree] = useState(tree);
+  const [loadingPath, setLoadingPath] = useState<string | null>(null);
+
+  useEffect(() => {
+    setVisibleTree(tree);
+  }, [tree]);
+
+  const handleLoadDirectory = async (directoryPath: string) => {
+    if (!onLoadDirectory) {
+      return;
+    }
+
+    setLoadingPath(directoryPath);
+
+    try {
+      const children = await onLoadDirectory(directoryPath);
+
+      setVisibleTree((currentTree) =>
+        updateNodeChildren(currentTree, directoryPath, children)
+      );
+    } finally {
+      setLoadingPath(null);
+    }
+  };
+
   return (
     <div className="h-full overflow-auto rounded-md border bg-card">
       <ProjectNodeRow
-        node={tree}
+        node={visibleTree}
         depth={0}
+        loadingPath={loadingPath}
+        onLoadDirectory={handleLoadDirectory}
         onSelectFile={onSelectFile}
         selectedFilePath={selectedFilePath}
       />
     </div>
   );
-}
+};

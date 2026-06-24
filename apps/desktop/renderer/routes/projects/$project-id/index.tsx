@@ -7,6 +7,7 @@ import { KnowledgeList, ResolutionNotes } from "@/features/docs";
 import { getResolvedErrorIds } from "@/features/docs/services/note-service";
 import { ErrorTable, type detectedError } from "@/features/error";
 import { ProjectExplorer, ProjectFileViewer, useProject } from "@/features/project";
+import { readProjectDirectory } from "@/features/project/services/project-directory-service";
 import { useProjectStore } from "@/features/project/stores/project-store";
 import {
   CommandRunner,
@@ -21,7 +22,7 @@ type projectTab = "explorer" | "runs" | "errors" | "knowledge" | "settings";
 
 const tabs: projectTab[] = ["explorer", "runs", "errors", "knowledge", "settings"];
 
-export function ProjectRoute() {
+export const ProjectRoute = () => {
   const { t } = useTranslation();
   const { projectId } = useParams({ from: "/projects/$projectId" });
   const search = useSearch({ from: "/projects/$projectId" });
@@ -55,9 +56,9 @@ export function ProjectRoute() {
     setSelectedError(errors[0] ?? null);
   }, [errors]);
 
-  function handleTabChange(tab: projectTab) {
+  const handleTabChange = (tab: projectTab) => {
     void navigate({ search: { tab } });
-  }
+  };
 
   if (project.isLoading) {
     return <div className="p-6 text-sm text-muted-foreground">{t("project.loading")}</div>;
@@ -66,6 +67,8 @@ export function ProjectRoute() {
   if (!project.data) {
     return <div className="p-6 text-sm text-muted-foreground">{t("project.notFound")}</div>;
   }
+
+  const projectData = project.data;
 
   return (
     <motion.div
@@ -77,20 +80,20 @@ export function ProjectRoute() {
       <header className="border-b bg-card px-4 py-3">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h1 className="text-lg font-semibold">{project.data.name}</h1>
+            <h1 className="text-lg font-semibold">{projectData.name}</h1>
             <p className="font-mono text-xs text-muted-foreground">
-              {project.data.path}
+              {projectData.path}
             </p>
           </div>
           <div className="grid grid-cols-5 gap-2 text-xs">
-            <Metadata label={t("project.runtime")} value={project.data.runtime} />
-            <Metadata label={t("project.framework")} value={project.data.framework} />
-            <Metadata label={t("project.package")} value={project.data.packageManager} />
-            <Metadata label={t("project.branch")} value={project.data.branch} />
+            <Metadata label={t("project.runtime")} value={projectData.runtime} />
+            <Metadata label={t("project.framework")} value={projectData.framework} />
+            <Metadata label={t("project.package")} value={projectData.packageManager} />
+            <Metadata label={t("project.branch")} value={projectData.branch} />
             <Metadata
               label={t("project.source")}
               value={
-                project.data.source === "github"
+                projectData.source === "github"
                   ? t("project.githubSource")
                   : t("project.localSource")
               }
@@ -113,10 +116,10 @@ export function ProjectRoute() {
               </button>
             ))}
           </div>
-          {project.data.source === "local" ? (
+          {projectData.source === "local" ? (
             <CommandRunner
-              projectId={project.data.id}
-              projectPath={project.data.path}
+              projectId={projectData.id}
+              projectPath={projectData.path}
               onRunComplete={(result) => {
                 addRun(result);
                 setSelectedRun(result);
@@ -152,13 +155,22 @@ export function ProjectRoute() {
             {activeTab === "explorer" && (
               <div className="grid h-full grid-cols-[minmax(280px,360px)_1fr] gap-4">
                 <ProjectExplorer
-                  tree={project.data.tree}
+                  tree={projectData.tree}
                   selectedFilePath={selectedFilePath}
+                  onLoadDirectory={
+                    projectData.source === "local"
+                      ? (directoryPath) =>
+                          readProjectDirectory({
+                            directoryPath,
+                            projectPath: projectData.path
+                          })
+                      : undefined
+                  }
                   onSelectFile={setSelectedFilePath}
                 />
                 <ProjectFileViewer
                   filePath={selectedFilePath}
-                  project={project.data}
+                  project={projectData}
                 />
               </div>
             )}
@@ -185,7 +197,7 @@ export function ProjectRoute() {
                   onNoteSaved={() =>
                     setNotesVersion((currentVersion) => currentVersion + 1)
                   }
-                  projectId={project.data.id}
+                  projectId={projectData.id}
                 />
               </div>
             )}
@@ -193,7 +205,7 @@ export function ProjectRoute() {
               <KnowledgeList
                 errors={errors}
                 refreshKey={notesVersion}
-                projectId={project.data.id}
+                projectId={projectData.id}
               />
             )}
             {activeTab === "settings" && (
@@ -206,18 +218,18 @@ export function ProjectRoute() {
       </section>
     </motion.div>
   );
-}
+};
 
 type metadataProps = {
   label: string;
   value: string;
 };
 
-function Metadata({ label, value }: metadataProps) {
+const Metadata = ({ label, value }: metadataProps) => {
   return (
     <div className="min-w-[110px] rounded-md border bg-background px-3 py-2">
       <div className="text-muted-foreground">{label}</div>
       <div className="mt-1 truncate font-mono">{value}</div>
     </div>
   );
-}
+};

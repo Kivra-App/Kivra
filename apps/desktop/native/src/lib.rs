@@ -124,6 +124,29 @@ fn scan_project(project_path: String) -> Result<ScannedProject, KivraError> {
 }
 
 #[tauri::command]
+fn read_project_directory(
+    project_path: String,
+    directory_path: String,
+) -> Result<Vec<ProjectNode>, KivraError> {
+    let root_path = PathBuf::from(project_path)
+        .canonicalize()
+        .map_err(|error| KivraError::Filesystem(error.to_string()))?;
+    let directory_path = PathBuf::from(directory_path)
+        .canonicalize()
+        .map_err(|error| KivraError::Filesystem(error.to_string()))?;
+
+    if !directory_path.starts_with(&root_path) {
+        return Err(KivraError::FileOutsideProject);
+    }
+
+    if !directory_path.is_dir() {
+        return Err(KivraError::NotDirectory);
+    }
+
+    read_children(&root_path, &directory_path, 0)
+}
+
+#[tauri::command]
 fn run_project_command(project_path: String, command: String) -> Result<RunResult, KivraError> {
     let started_at = Instant::now();
     let output = if cfg!(target_os = "windows") {
@@ -227,7 +250,7 @@ fn build_project_tree(
         });
     }
 
-    let children = if depth < 4 {
+    let children = if depth < 1 {
         Some(read_children(root_path, current_path, depth)?)
     } else {
         None
@@ -275,7 +298,6 @@ fn read_children(
 
     entries
         .into_iter()
-        .take(200)
         .map(|entry| build_project_tree(root_path, &entry.path(), depth + 1))
         .collect()
 }
@@ -462,6 +484,7 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![
             scan_project,
+            read_project_directory,
             run_project_command,
             read_project_file
         ])
