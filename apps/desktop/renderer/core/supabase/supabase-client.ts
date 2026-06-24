@@ -11,8 +11,10 @@ export const createSupabaseClient = () => {
 
   return createClient(env.supabaseUrl, env.supabaseAnonKey, {
     auth: {
-      persistSession: true,
-      autoRefreshToken: true
+      autoRefreshToken: true,
+      detectSessionInUrl: false,
+      flowType: "pkce",
+      persistSession: true
     }
   });
 };

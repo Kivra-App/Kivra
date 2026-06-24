@@ -23,6 +23,8 @@ enum KivraError {
     Command(String),
     #[error("File is outside the project")]
     FileOutsideProject,
+    #[error("Only HTTPS URLs can be opened externally")]
+    InvalidExternalUrl,
 }
 
 impl Serialize for KivraError {
@@ -144,6 +146,30 @@ fn read_project_directory(
     }
 
     read_children(&root_path, &directory_path, 0)
+}
+
+#[tauri::command]
+fn open_external_url(url: String) -> Result<(), KivraError> {
+    if !url.starts_with("https://") {
+        return Err(KivraError::InvalidExternalUrl);
+    }
+
+    let output = if cfg!(target_os = "macos") {
+        Command::new("open").arg(&url).output()
+    } else if cfg!(target_os = "windows") {
+        Command::new("cmd").args(["/C", "start", "", &url]).output()
+    } else {
+        Command::new("xdg-open").arg(&url).output()
+    }
+    .map_err(|error| KivraError::Command(error.to_string()))?;
+
+    if output.status.success() {
+        Ok(())
+    } else {
+        Err(KivraError::Command(
+            String::from_utf8_lossy(&output.stderr).to_string(),
+        ))
+    }
 }
 
 #[tauri::command]
@@ -481,10 +507,12 @@ fn current_timestamp() -> String {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![
             scan_project,
             read_project_directory,
+            open_external_url,
             run_project_command,
             read_project_file
         ])

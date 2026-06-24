@@ -5,4 +5,5 @@ export {
   useGithubLogin,
   useSignOut
 } from "@/features/auth/hooks/use-auth";
+export { handleAuthCallbackUrl } from "@/features/auth/services/auth-service";
 export type { authUser } from "@/features/auth/services/auth-service";
