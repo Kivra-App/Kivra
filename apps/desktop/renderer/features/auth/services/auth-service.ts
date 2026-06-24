@@ -152,11 +152,13 @@ export const signOut = async () => {
 const parseAuthCallbackUrl = (url: string) => {
   try {
     const callbackUrl = new URL(url);
+    const loopbackCallbackUrl = new URL(loopbackAuthCallbackUrl);
     const isAuthCallback =
       (callbackUrl.protocol === "kivra:" &&
         callbackUrl.hostname === "auth" &&
         callbackUrl.pathname === "/callback") ||
-      callbackUrl.origin === loopbackAuthCallbackUrl;
+      (callbackUrl.origin === loopbackCallbackUrl.origin &&
+        callbackUrl.pathname === loopbackCallbackUrl.pathname);
 
     return isAuthCallback ? callbackUrl : null;
   } catch {

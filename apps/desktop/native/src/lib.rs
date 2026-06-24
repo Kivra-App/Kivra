@@ -322,7 +322,7 @@ fn read_auth_callback_request(mut stream: TcpStream) -> Result<String, KivraErro
         "<!doctype html><html lang=\"en\"><head>",
         "<meta charset=\"utf-8\">",
         "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">",
-        "<title>Kivra authentication complete</title>",
+        "<title>Kivra callback received</title>",
         "<style>",
         "body{margin:0;min-height:100vh;display:grid;place-items:center;",
         "font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;",
@@ -331,8 +331,8 @@ fn read_auth_callback_request(mut stream: TcpStream) -> Result<String, KivraErro
         "h1{font-size:22px;margin:0 0 12px}",
         "p{font-size:14px;line-height:1.6;color:#aeb8c8;margin:0}",
         "</style></head><body><main>",
-        "<h1>Authentication complete</h1>",
-        "<p>You can return to Kivra now. This tab can be closed.</p>",
+        "<h1>Callback received</h1>",
+        "<p>Kivra is finishing sign-in in the desktop app. You can close this tab.</p>",
         "</main>",
         "</body></html>"
     );
