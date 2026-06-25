@@ -1,6 +1,9 @@
 import { ChevronDown, Loader2 } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
 import {
   type ButtonHTMLAttributes,
+  type KeyboardEvent,
+  type MouseEvent,
   type ReactNode,
   useEffect,
   useId,
@@ -57,7 +60,9 @@ export const Select = ({
   isLoading = false,
   name,
   onBlur,
+  onClick,
   onChange,
+  onKeyDown,
   options,
   placeholder,
   selectClassName,
@@ -188,6 +193,54 @@ export const Select = ({
     setIsOpen((current) => !current);
   };
 
+  const handleTriggerClick = (event: MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    onClick?.(event);
+    toggleMenu();
+  };
+
+  const handleTriggerKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
+    onKeyDown?.(event);
+
+    if (event.defaultPrevented) {
+      return;
+    }
+
+    if (event.key === "Escape") {
+      event.preventDefault();
+      event.stopPropagation();
+      setIsOpen(false);
+      return;
+    }
+
+    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      event.preventDefault();
+
+      if (!isOpen) {
+        setIsOpen(true);
+        return;
+      }
+
+      moveActiveOption(event.key === "ArrowDown" ? 1 : -1);
+    }
+
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+
+      if (!isOpen) {
+        setIsOpen(true);
+        return;
+      }
+
+      const option = options[activeIndex];
+
+      if (option) {
+        selectOption(option);
+      }
+    }
+  };
+
   const moveActiveOption = (direction: 1 | -1) => {
     if (enabledOptions.length === 0) {
       return;
@@ -211,6 +264,7 @@ export const Select = ({
   return (
     <>
       <button
+        {...props}
         ref={triggerRef}
         type="button"
         role="combobox"
@@ -225,50 +279,8 @@ export const Select = ({
           sizeClassName[size],
           className
         )}
-        onClick={(event) => {
-          event.preventDefault();
-          event.stopPropagation();
-        }}
-        onKeyDown={(event) => {
-          if (event.key === "Escape") {
-            event.preventDefault();
-            event.stopPropagation();
-            setIsOpen(false);
-            return;
-          }
-
-          if (event.key === "ArrowDown" || event.key === "ArrowUp") {
-            event.preventDefault();
-
-            if (!isOpen) {
-              setIsOpen(true);
-              return;
-            }
-
-            moveActiveOption(event.key === "ArrowDown" ? 1 : -1);
-          }
-
-          if (event.key === "Enter" || event.key === " ") {
-            event.preventDefault();
-
-            if (!isOpen) {
-              setIsOpen(true);
-              return;
-            }
-
-            const option = options[activeIndex];
-
-            if (option) {
-              selectOption(option);
-            }
-          }
-        }}
-        onPointerDown={(event) => {
-          event.preventDefault();
-          event.stopPropagation();
-          toggleMenu();
-        }}
-        {...props}
+        onClick={handleTriggerClick}
+        onKeyDown={handleTriggerKeyDown}
       >
         {isLoading ? (
           <Loader2 className="h-4 w-4 shrink-0 animate-spin text-muted-foreground" />
@@ -286,61 +298,79 @@ export const Select = ({
         </span>
         <ChevronDown
           className={cn(
-            "pointer-events-none absolute right-2 h-4 w-4 text-muted-foreground transition-transform",
-            isOpen && "rotate-180 text-foreground"
+            "pointer-events-none absolute right-2 h-4 w-4 rotate-0 text-muted-foreground transition-[color,transform] duration-200",
+            isOpen && "rotate-180 text-primary"
           )}
         />
       </button>
-      {isOpen &&
+      {typeof document !== "undefined" &&
         createPortal(
-          <div
-            ref={menuRef}
-            id={`${id}-listbox`}
-            role="listbox"
-            className="fixed z-[1000] rounded-md border bg-popover p-1 text-popover-foreground shadow-2xl shadow-black/30"
-            style={{
-              left: menuGeometry.left,
-              maxHeight: menuGeometry.maxHeight,
-              top: menuGeometry.top,
-              width: menuGeometry.width
-            }}
-          >
-            <div
-              className={cn(
-                "absolute left-4 z-0 h-3 w-3 rotate-45 border bg-popover",
-                menuGeometry.placement === "bottom"
-                  ? "-top-1.5 border-b-0 border-r-0"
-                  : "-bottom-1.5 border-l-0 border-t-0"
-              )}
-            />
-            <div className="relative z-10 max-h-[inherit] overflow-auto">
-              {options.map((option, index) => {
-                const isSelected = option.value === value;
-                const isActive = index === activeIndex;
+          <AnimatePresence>
+            {isOpen && (
+              <motion.div
+                ref={menuRef}
+                id={`${id}-listbox`}
+                role="listbox"
+                initial={{
+                  opacity: 0,
+                  scale: 0.98,
+                  y: menuGeometry.placement === "bottom" ? -4 : 4
+                }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{
+                  opacity: 0,
+                  scale: 0.98,
+                  y: menuGeometry.placement === "bottom" ? -4 : 4
+                }}
+                transition={{ duration: 0.14, ease: "easeOut" }}
+                className="fixed z-[1000] rounded-md border bg-popover p-1 text-popover-foreground shadow-2xl shadow-black/30"
+                style={{
+                  left: menuGeometry.left,
+                  maxHeight: menuGeometry.maxHeight,
+                  top: menuGeometry.top,
+                  transformOrigin:
+                    menuGeometry.placement === "bottom" ? "top left" : "bottom left",
+                  width: menuGeometry.width
+                }}
+              >
+                <div
+                  className={cn(
+                    "absolute left-4 z-0 h-3 w-3 rotate-45 border bg-popover",
+                    menuGeometry.placement === "bottom"
+                      ? "-top-1.5 border-b-0 border-r-0"
+                      : "-bottom-1.5 border-l-0 border-t-0"
+                  )}
+                />
+                <div className="relative z-10 max-h-[inherit] overflow-auto">
+                  {options.map((option, index) => {
+                    const isSelected = option.value === value;
+                    const isActive = index === activeIndex;
 
-                return (
-                  <button
-                    key={option.value}
-                    type="button"
-                    role="option"
-                    aria-selected={isSelected}
-                    disabled={option.disabled}
-                    className={cn(
-                      "flex h-8 w-full items-center rounded px-2 text-left text-xs transition",
-                      isSelected && "bg-primary text-primary-foreground",
-                      !isSelected && isActive && "bg-muted text-foreground",
-                      !isSelected && !isActive && "text-muted-foreground hover:bg-muted hover:text-foreground",
-                      option.disabled && "cursor-not-allowed opacity-45"
-                    )}
-                    onMouseEnter={() => setActiveIndex(index)}
-                    onClick={() => selectOption(option)}
-                  >
-                    <span className="truncate">{option.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>,
+                    return (
+                      <button
+                        key={option.value}
+                        type="button"
+                        role="option"
+                        aria-selected={isSelected}
+                        disabled={option.disabled}
+                        className={cn(
+                          "flex h-8 w-full items-center rounded px-2 text-left text-xs transition",
+                          isSelected && "bg-primary text-primary-foreground",
+                          !isSelected && isActive && "bg-muted text-foreground",
+                          !isSelected && !isActive && "text-muted-foreground hover:bg-muted hover:text-foreground",
+                          option.disabled && "cursor-not-allowed opacity-45"
+                        )}
+                        onClick={() => selectOption(option)}
+                        onMouseEnter={() => setActiveIndex(index)}
+                      >
+                        <span className="truncate">{option.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>,
           document.body
         )}
     </>

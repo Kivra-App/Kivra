@@ -284,15 +284,16 @@ const ProfileSelect = ({
   options: selectOption[];
   value: string;
 }) => (
-  <label className="grid grid-cols-[1fr_160px] items-center gap-3 text-xs">
+  <div className="grid grid-cols-[1fr_160px] items-center gap-3 text-xs">
     <span className="text-muted-foreground">{label}</span>
     <Select
+      aria-label={label}
       size="sm"
       value={value}
       options={options}
       onChange={(event) => onChange(event.target.value)}
     />
-  </label>
+  </div>
 );
 
 const getLanguageOptions = (
