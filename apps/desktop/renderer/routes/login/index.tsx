@@ -42,10 +42,10 @@ export const LoginRoute = () => {
       className="relative min-h-screen overflow-hidden bg-background"
     >
       <Suspense fallback={null}>
-        <LoginMemoryScene className="absolute inset-0" />
+        <LoginMemoryScene className="absolute inset-y-0 right-[392px] w-[46vw] min-w-[420px] max-w-[720px]" />
       </Suspense>
-      <div className="absolute inset-0 bg-[linear-gradient(90deg,hsl(var(--background))_0%,hsl(var(--background)/0.82)_37%,hsl(var(--background)/0.44)_72%,hsl(var(--background)/0.78)_100%)]" />
-      <div className="absolute inset-0 bg-[linear-gradient(180deg,hsl(var(--background)/0.18)_0%,hsl(var(--background)/0.86)_100%)]" />
+      <div className="absolute inset-0 bg-[linear-gradient(90deg,hsl(var(--background))_0%,hsl(var(--background))_34%,hsl(var(--background)/0.76)_58%,hsl(var(--background)/0.92)_100%)]" />
+      <div className="absolute inset-0 bg-[linear-gradient(180deg,hsl(var(--background)/0.08)_0%,hsl(var(--background)/0.88)_100%)]" />
 
       <div className="relative z-10 grid min-h-screen grid-cols-[minmax(0,1fr)_392px]">
         <section className="flex min-h-screen flex-col justify-between p-8">
@@ -74,7 +74,7 @@ export const LoginRoute = () => {
           </div>
         </section>
 
-        <aside className="flex min-h-screen items-center border-l bg-background/58 p-6 backdrop-blur-xl">
+        <aside className="flex min-h-screen items-center border-l bg-background/82 p-6 backdrop-blur-xl">
           <div className="w-full space-y-4">
             <div>
               <h2 className="text-base font-semibold">{t("auth.title")}</h2>
