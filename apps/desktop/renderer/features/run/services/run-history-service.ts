@@ -56,6 +56,10 @@ export const writeStoredRuns = (projectId: string, runs: runResult[]) => {
   window.localStorage.setItem(getStorageKey(projectId), JSON.stringify(runs));
 };
 
+export const deleteStoredRuns = (projectId: string) => {
+  window.localStorage.removeItem(getStorageKey(projectId));
+};
+
 export const mergeRuns = (localRuns: runResult[], syncedRuns: runResult[]) => {
   const runMap = new Map<string, runResult>();
 

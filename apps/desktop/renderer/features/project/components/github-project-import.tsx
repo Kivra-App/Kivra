@@ -12,6 +12,7 @@ import {
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { useGithubLogin } from "@/features/auth";
 import { useGithubRepositories } from "@/features/project/hooks/use-github-repositories";
 import { useImportGithubProject } from "@/features/project/hooks/use-projects";
 import type { githubRepository } from "@/features/project/services/github-project-service";
@@ -28,9 +29,14 @@ export const GitHubProjectImport = ({
   const [query, setQuery] = useState("");
   const [activeRepoId, setActiveRepoId] = useState<number | null>(null);
   const githubRepositories = useGithubRepositories();
+  const githubLogin = useGithubLogin();
   const importGithubProject = useImportGithubProject();
   const hasRequestedRepositories =
     githubRepositories.isFetched || githubRepositories.isFetching;
+  const repositoryError =
+    githubRepositories.error instanceof Error ? githubRepositories.error : null;
+  const hasRepositoryError = Boolean(repositoryError);
+  const needsGithubReconnect = repositoryError?.message === "GITHUB_TOKEN_REQUIRED";
   const repositories = githubRepositories.data ?? [];
   const filteredRepositories = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -55,6 +61,14 @@ export const GitHubProjectImport = ({
 
   const handleLoadRepositories = () => {
     void githubRepositories.refetch();
+  };
+
+  const handleReconnectGithub = () => {
+    githubLogin.mutate(undefined, {
+      onSuccess: () => {
+        void githubRepositories.refetch();
+      }
+    });
   };
 
   const handleImportRepository = (repo: githubRepository) => {
@@ -95,7 +109,7 @@ export const GitHubProjectImport = ({
         </Button>
       </div>
 
-      {hasRequestedRepositories && (
+      {hasRequestedRepositories && !hasRepositoryError && (
         <div className="border-b p-3">
           <div className="flex h-9 items-center gap-2 rounded-md border bg-background px-3">
             <Search className="h-4 w-4 text-muted-foreground" />
@@ -136,16 +150,37 @@ export const GitHubProjectImport = ({
           </div>
         )}
 
-        {githubRepositories.error instanceof Error && (
-          <p className="p-4 text-xs text-destructive">
-            {githubRepositories.error.message === "GITHUB_TOKEN_REQUIRED"
-              ? t("project.githubTokenRequired")
-              : githubRepositories.error.message}
-          </p>
+        {repositoryError && (
+          <div className="p-4">
+            <div className="rounded-md border border-destructive/40 bg-destructive/10 p-3">
+              <div className="text-xs font-medium text-destructive">
+                {formatGithubRepositoryError(repositoryError, t)}
+              </div>
+              {needsGithubReconnect && (
+                <div className="mt-3">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    disabled={githubLogin.isPending}
+                    onClick={handleReconnectGithub}
+                  >
+                    {githubLogin.isPending ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <RefreshCw className="h-4 w-4" />
+                    )}
+                    {t("project.githubReconnect")}
+                  </Button>
+                </div>
+              )}
+            </div>
+          </div>
         )}
 
         {!githubRepositories.isFetching &&
           hasRequestedRepositories &&
+          !hasRepositoryError &&
           filteredRepositories.length > 0 && (
             <div className="max-h-[360px] overflow-auto p-2">
               {filteredRepositories.map((repo) => (
@@ -164,6 +199,7 @@ export const GitHubProjectImport = ({
 
         {!githubRepositories.isFetching &&
           hasRequestedRepositories &&
+          !hasRepositoryError &&
           repositories.length > 0 &&
           filteredRepositories.length === 0 && (
             <p className="p-4 text-xs text-muted-foreground">
@@ -173,6 +209,7 @@ export const GitHubProjectImport = ({
 
         {!githubRepositories.isFetching &&
           hasRequestedRepositories &&
+          !hasRepositoryError &&
           repositories.length === 0 && (
             <p className="p-4 text-xs text-muted-foreground">
               {t("project.githubProjectsEmpty")}
@@ -261,4 +298,19 @@ const formatUpdatedAt = (updatedAt: string) => {
     month: "short",
     day: "numeric"
   }).format(new Date(updatedAt));
+};
+
+const formatGithubRepositoryError = (
+  error: Error,
+  t: ReturnType<typeof useTranslation>["t"]
+) => {
+  if (error.message === "GITHUB_TOKEN_REQUIRED") {
+    return t("project.githubTokenRequired");
+  }
+
+  if (error.message === "GITHUB_API_403") {
+    return t("project.githubForbidden");
+  }
+
+  return error.message;
 };

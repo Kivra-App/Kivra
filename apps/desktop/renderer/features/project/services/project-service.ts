@@ -1,7 +1,12 @@
 import { invokeCommand } from "@/core/tauri/tauri-client";
-import { fetchSyncedProjects, syncProject } from "@/core/supabase/sync-service";
+import {
+  deleteSyncedProject,
+  fetchSyncedProjects,
+  syncProject
+} from "@/core/supabase/sync-service";
 import { scannedProjectSchema } from "@/features/project/schemas/project-schema";
 import type { githubBranch, project } from "@/features/project/types/project";
+import { deleteStoredRuns } from "@/features/run/services/run-history-service";
 import {
   createGithubProject,
   fetchGithubProjectBranches,
@@ -189,6 +194,16 @@ export const getProjects = async (): Promise<project[]> => {
   void syncTraceProjectList(projects);
 
   return projects;
+};
+
+export const deleteProject = async (projectId: string): Promise<string> => {
+  const projects = readStoredProjects();
+
+  writeStoredProjects(projects.filter((project) => project.id !== projectId));
+  deleteStoredRuns(projectId);
+  await deleteSyncedProject(projectId);
+
+  return projectId;
 };
 
 export const getProject = async (projectId: string): Promise<project | null> => {

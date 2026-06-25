@@ -75,6 +75,26 @@ export const syncProject = async (project: project): Promise<boolean> => {
   return !error;
 };
 
+export const deleteSyncedProject = async (projectId: string): Promise<boolean> => {
+  if (!supabase) {
+    return false;
+  }
+
+  const ownerId = await getUserId();
+
+  if (!ownerId) {
+    return false;
+  }
+
+  const { error } = await supabase
+    .from("projects")
+    .delete()
+    .eq("id", projectId)
+    .eq("owner_id", ownerId);
+
+  return !error;
+};
+
 export const syncRun = async (run: runResult): Promise<boolean> => {
   if (!supabase) {
     return false;

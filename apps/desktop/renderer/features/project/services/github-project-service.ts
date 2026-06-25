@@ -98,13 +98,21 @@ const githubFetch = async <T>(path: string): Promise<T> => {
     throw new Error("GITHUB_TOKEN_REQUIRED");
   }
 
-  const response = await fetch(`https://api.github.com${path}`, {
-    headers: {
-      Accept: "application/vnd.github+json",
-      Authorization: `Bearer ${token}`,
-      "X-GitHub-Api-Version": "2022-11-28"
+  let response = await fetchGithubPath(path, token);
+
+  if (response.status === 401) {
+    const refreshedToken = await getGithubAccessToken({ forceRefresh: true });
+
+    if (!refreshedToken) {
+      throw new Error("GITHUB_TOKEN_REQUIRED");
     }
-  });
+
+    response = await fetchGithubPath(path, refreshedToken);
+  }
+
+  if (response.status === 401) {
+    throw new Error("GITHUB_TOKEN_REQUIRED");
+  }
 
   if (!response.ok) {
     throw new Error(`GITHUB_API_${response.status}`);
@@ -112,6 +120,15 @@ const githubFetch = async <T>(path: string): Promise<T> => {
 
   return response.json() as Promise<T>;
 };
+
+const fetchGithubPath = (path: string, token: string) =>
+  fetch(`https://api.github.com${path}`, {
+    headers: {
+      Accept: "application/vnd.github+json",
+      Authorization: `Bearer ${token}`,
+      "X-GitHub-Api-Version": "2022-11-28"
+    }
+  });
 
 export const fetchGithubRepositories = async (): Promise<githubRepository[]> => {
   const repos = githubRepositoriesResponseSchema.parse(

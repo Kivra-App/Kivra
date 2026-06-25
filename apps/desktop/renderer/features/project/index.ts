@@ -5,6 +5,7 @@ export { ProjectRegistration } from "@/features/project/components/project-regis
 export { ProjectTable } from "@/features/project/components/project-table";
 export {
   useConnectGithubProjectToLocalFolder,
+  useDeleteProject,
   useGithubProjectBranches,
   useImportGithubProject,
   useProject,

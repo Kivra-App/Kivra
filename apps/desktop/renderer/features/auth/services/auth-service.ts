@@ -111,18 +111,28 @@ export const handleAuthCallbackUrl = async (url: string): Promise<authUser | nul
   return getCurrentUser();
 };
 
-export const getGithubAccessToken = async (): Promise<string | null> => {
+export const getGithubAccessToken = async ({
+  forceRefresh = false
+}: {
+  forceRefresh?: boolean;
+} = {}): Promise<string | null> => {
   if (!supabase) {
     return null;
   }
 
-  const { data, error } = await supabase.auth.getSession();
+  const { data, error } = forceRefresh
+    ? await supabase.auth.refreshSession()
+    : await supabase.auth.getSession();
 
-  if (error || !data.session?.provider_token) {
-    return null;
+  if (!error && data.session?.provider_token) {
+    return data.session.provider_token;
   }
 
-  return data.session.provider_token;
+  if (!forceRefresh) {
+    return getGithubAccessToken({ forceRefresh: true });
+  }
+
+  return null;
 };
 
 export const signOut = async () => {

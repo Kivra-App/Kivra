@@ -1,6 +1,6 @@
 import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { AnimatePresence, motion } from "framer-motion";
-import { BookOpenText, FolderGit2, GitBranch, Loader2 } from "lucide-react";
+import { BookOpenText, FolderGit2, GitBranch, Loader2, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -11,6 +11,7 @@ import {
   ProjectExplorer,
   ProjectFileViewer,
   useConnectGithubProjectToLocalFolder,
+  useDeleteProject,
   useGithubProjectBranches,
   useProject,
   useSwitchGithubProjectBranch
@@ -40,6 +41,7 @@ export const ProjectRoute = () => {
   const navigate = useNavigate({ from: "/projects/$projectId" });
   const project = useProject(projectId);
   const connectLocalFolder = useConnectGithubProjectToLocalFolder();
+  const deleteProject = useDeleteProject();
   const switchGithubBranch = useSwitchGithubProjectBranch();
   const setSelectedProjectId = useProjectStore((store) => store.setSelectedProjectId);
   const activeTab = search.tab;
@@ -109,6 +111,26 @@ export const ProjectRoute = () => {
     switchGithubBranch.mutate({
       branch,
       projectId
+    });
+  };
+
+  const handleDeleteProject = () => {
+    if (!project.data) {
+      return;
+    }
+
+    const shouldDelete = window.confirm(
+      t("project.deleteConfirm", { name: project.data.name })
+    );
+
+    if (!shouldDelete) {
+      return;
+    }
+
+    deleteProject.mutate(project.data.id, {
+      onSuccess: () => {
+        void navigate({ to: "/", search: {} });
+      }
     });
   };
 
@@ -226,9 +248,9 @@ export const ProjectRoute = () => {
         )}
       </header>
 
-      <section className="min-h-0 flex-1 overflow-auto p-4">
+      <section className="flex min-h-0 flex-1 flex-col overflow-hidden p-4">
         {projectData.source === "github" && (
-          <section className="mb-3 rounded-md border bg-card p-3">
+          <section className="mb-3 shrink-0 rounded-md border bg-card p-3">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <div className="flex items-center gap-2 text-sm font-medium">
@@ -247,7 +269,7 @@ export const ProjectRoute = () => {
             )}
           </section>
         )}
-        <div className="mb-3 rounded-md border bg-card px-3 py-2">
+        <div className="mb-3 shrink-0 rounded-md border bg-card px-3 py-2">
           <div className="text-xs font-medium">
             {t(`project.tabs.${activeTab}`)}
           </div>
@@ -262,10 +284,10 @@ export const ProjectRoute = () => {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -6 }}
             transition={{ duration: 0.18, ease: "easeOut" }}
-            className="h-full"
+            className="min-h-0 flex-1"
           >
             {activeTab === "explorer" && (
-              <div className="grid h-full grid-cols-[minmax(280px,360px)_1fr] gap-4">
+              <div className="grid h-full min-h-0 grid-cols-[minmax(280px,360px)_1fr] gap-4">
                 <ProjectExplorer
                   tree={projectData.tree}
                   selectedFilePath={selectedFilePath}
@@ -329,8 +351,32 @@ export const ProjectRoute = () => {
               </div>
             )}
             {activeTab === "settings" && (
-              <div className="rounded-md border bg-card p-4 text-sm text-muted-foreground">
-                {t("project.settingsMessage")}
+              <div className="space-y-3">
+                <div className="rounded-md border bg-card p-4 text-sm text-muted-foreground">
+                  {t("project.settingsMessage")}
+                </div>
+                <div className="rounded-md border border-destructive/30 bg-card p-4">
+                  <div className="text-sm font-medium text-destructive">
+                    {t("project.deleteProject")}
+                  </div>
+                  <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                    {t("project.deleteProjectDetail")}
+                  </p>
+                  <Button
+                    type="button"
+                    className="mt-3"
+                    variant="danger"
+                    disabled={deleteProject.isPending}
+                    onClick={handleDeleteProject}
+                  >
+                    {deleteProject.isPending ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Trash2 className="h-4 w-4" />
+                    )}
+                    {t("project.deleteProject")}
+                  </Button>
+                </div>
               </div>
             )}
           </motion.div>

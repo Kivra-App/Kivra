@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import {
   connectGithubProjectToLocalFolder,
+  deleteProject,
   getGithubProjectBranches,
   getProject,
   getProjects,
@@ -9,6 +10,7 @@ import {
   registerProject,
   switchGithubProjectBranch
 } from "@/features/project/services/project-service";
+import { useProjectStore } from "@/features/project/stores/project-store";
 
 export const useProjects = () =>
   useQuery({
@@ -50,6 +52,25 @@ export const useImportGithubProject = () => {
     mutationFn: importGithubProject,
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["projects"] });
+    }
+  });
+};
+
+export const useDeleteProject = () => {
+  const queryClient = useQueryClient();
+  const selectedProjectId = useProjectStore((store) => store.selectedProjectId);
+  const setSelectedProjectId = useProjectStore((store) => store.setSelectedProjectId);
+
+  return useMutation({
+    mutationFn: deleteProject,
+    onSuccess: (projectId) => {
+      if (selectedProjectId === projectId) {
+        setSelectedProjectId(null);
+      }
+
+      void queryClient.invalidateQueries({ queryKey: ["projects"] });
+      void queryClient.removeQueries({ queryKey: ["projects", projectId] });
+      void queryClient.removeQueries({ queryKey: ["runs", projectId] });
     }
   });
 };
