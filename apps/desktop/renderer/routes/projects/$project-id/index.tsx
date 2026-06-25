@@ -43,7 +43,10 @@ export const ProjectRoute = () => {
   const switchGithubBranch = useSwitchGithubProjectBranch();
   const setSelectedProjectId = useProjectStore((store) => store.setSelectedProjectId);
   const activeTab = search.tab;
-  const { runs, addRun } = useRunHistory(projectId);
+  const { runs, addRun } = useRunHistory(
+    projectId,
+    project.data?.source === "local" ? project.data.path : null
+  );
   const [selectedRun, setSelectedRun] = useState<runResult | null>(null);
   const [selectedFilePath, setSelectedFilePath] = useState<string | null>(null);
   const [selectedError, setSelectedError] = useState<detectedError | null>(null);
@@ -67,7 +70,13 @@ export const ProjectRoute = () => {
   }, [projectId, setSelectedProjectId]);
 
   useEffect(() => {
-    setSelectedRun(runs[0] ?? null);
+    setSelectedRun((currentRun) => {
+      if (!currentRun) {
+        return runs[0] ?? null;
+      }
+
+      return runs.find((run) => run.id === currentRun.id) ?? runs[0] ?? null;
+    });
   }, [runs]);
 
   useEffect(() => {

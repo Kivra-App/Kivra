@@ -56,3 +56,34 @@ http://127.0.0.1:3000/auth/callback
 pnpm build
 cargo check --manifest-path apps/desktop/native/Cargo.toml
 ```
+
+## External Log Capture
+
+Kivra captures logs from registered local projects through zsh shell
+integration. Install or refresh the integration with:
+
+```bash
+pnpm trace:install-shell
+```
+
+Open a new terminal or IDE terminal after installing it. Then run any command
+from a cwd inside a registered project:
+
+```bash
+flutter run
+pnpm build
+python -m pytest
+mvn test
+```
+
+Captured stdout/stderr events are written to:
+
+```bash
+~/.kivra/captured-runs
+```
+
+Check the current capture status with:
+
+```bash
+pnpm trace:diagnose /path/to/project
+```

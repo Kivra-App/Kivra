@@ -8,7 +8,9 @@
     "build": "pnpm --filter @kivra/desktop build",
     "preview": "pnpm --filter @kivra/desktop preview",
     "desktop:tauri:dev": "pnpm --filter @kivra/desktop tauri:dev",
-    "desktop:tauri:build": "pnpm --filter @kivra/desktop tauri:build"
+    "desktop:tauri:build": "pnpm --filter @kivra/desktop tauri:build",
+    "trace:diagnose": "node tools/trace-diagnose.mjs",
+    "trace:install-shell": "node tools/install-shell-capture.mjs"
   },
   "packageManager": "pnpm@11.9.0"
 }
