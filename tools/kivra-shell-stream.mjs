@@ -5,6 +5,12 @@ import { homedir } from "node:os";
 import { dirname, join, relative } from "node:path";
 
 const [mode, ...args] = process.argv.slice(2);
+const CAPTURE_PROTOCOL_VERSION = 1;
+const KIVRA_HOME_DIRECTORY = ".kivra";
+const CAPTURED_RUNS_DIRECTORY = "captured-runs";
+const CAPTURE_START_FILE = "start.json";
+const CAPTURE_EVENTS_FILE = "events.jsonl";
+const CAPTURE_INDEX_FILE = "index.jsonl";
 
 if (mode === "start") {
   const [cwd, command, projectsFile] = args;
@@ -15,14 +21,15 @@ if (mode === "start") {
   }
 
   const id = `${Date.now()}-${process.pid}`;
-  const runDir = join(homedir(), ".kivra", "captured-runs", projectKey(project), id);
+  const runDir = join(homedir(), KIVRA_HOME_DIRECTORY, CAPTURED_RUNS_DIRECTORY, projectKey(project), id);
   mkdirSync(runDir, { recursive: true });
   const startedAt = new Date().toISOString();
   writeFileSync(
-    join(runDir, "start.json"),
+    join(runDir, CAPTURE_START_FILE),
     `${JSON.stringify(
       {
         type: "start",
+        protocolVersion: CAPTURE_PROTOCOL_VERSION,
         id,
         projectPath: project,
         leaderPid: process.ppid,
@@ -35,8 +42,15 @@ if (mode === "start") {
     )}\n`
   );
   appendFileSync(
-    join(dirname(runDir), "index.jsonl"),
-    `${JSON.stringify({ id, projectPath: project, command, startedAt, captureMode: "shell" })}\n`
+    join(dirname(runDir), CAPTURE_INDEX_FILE),
+    `${JSON.stringify({
+      protocolVersion: CAPTURE_PROTOCOL_VERSION,
+      id,
+      projectPath: project,
+      command,
+      startedAt,
+      captureMode: "shell"
+    })}\n`
   );
   process.stdout.write(runDir);
   process.exit(0);
@@ -55,9 +69,10 @@ if (mode === "stream") {
 
     if (data) {
       appendFileSync(
-        join(runDir, "events.jsonl"),
+        join(runDir, CAPTURE_EVENTS_FILE),
         `${JSON.stringify({
-          type: stream,
+          type: "output",
+          protocolVersion: CAPTURE_PROTOCOL_VERSION,
           time: new Date().toISOString(),
           pid: null,
           ppid: null,

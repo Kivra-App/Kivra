@@ -12,6 +12,7 @@
     "jetbrains:build": "cd plugins/jetbrains && ./gradlew buildPlugin",
     "jetbrains:test": "cd plugins/jetbrains && ./gradlew test",
     "jetbrains:run-ide": "cd plugins/jetbrains && ./gradlew runIde",
+    "protocol:check": "node tools/validate-protocol-fixtures.mjs",
     "trace:diagnose": "node tools/trace-diagnose.mjs",
     "trace:install-shell": "node tools/install-shell-capture.mjs"
   },

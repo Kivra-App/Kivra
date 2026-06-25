@@ -8,6 +8,12 @@ import java.time.Instant
 import java.util.UUID
 import kotlin.io.path.createDirectories
 
+private const val CAPTURE_PROTOCOL_VERSION = 1
+private const val CAPTURE_START_FILE = "start.json"
+private const val CAPTURE_EVENTS_FILE = "events.jsonl"
+private const val CAPTURE_END_FILE = "end.json"
+private const val CAPTURE_INDEX_FILE = "index.jsonl"
+
 class KivraCapturedRunWriter private constructor(
     private val runDirectory: Path,
     private val eventsWriter: BufferedWriter,
@@ -38,7 +44,7 @@ class KivraCapturedRunWriter private constructor(
         eventsWriter.close()
         val finishedAtMillis = System.currentTimeMillis()
         Files.writeString(
-            runDirectory.resolve("end.json"),
+            runDirectory.resolve(CAPTURE_END_FILE),
             gson.toJson(
                 CapturedRunEnd(
                     finishedAt = Instant.ofEpochMilli(finishedAtMillis).toString(),
@@ -67,7 +73,7 @@ class KivraCapturedRunWriter private constructor(
 
             runDirectory.createDirectories()
             Files.writeString(
-                runDirectory.resolve("start.json"),
+                runDirectory.resolve(CAPTURE_START_FILE),
                 gson.toJson(
                     CapturedRunStart(
                         id = id,
@@ -78,7 +84,7 @@ class KivraCapturedRunWriter private constructor(
                 ) + "\n"
             )
             Files.writeString(
-                runDirectory.parent.resolve("index.jsonl"),
+                runDirectory.parent.resolve(CAPTURE_INDEX_FILE),
                 gson.toJson(
                     CapturedRunIndex(
                         id = id,
@@ -94,7 +100,7 @@ class KivraCapturedRunWriter private constructor(
             return KivraCapturedRunWriter(
                 runDirectory = runDirectory,
                 eventsWriter = Files.newBufferedWriter(
-                    runDirectory.resolve("events.jsonl"),
+                    runDirectory.resolve(CAPTURE_EVENTS_FILE),
                     java.nio.file.StandardOpenOption.CREATE,
                     java.nio.file.StandardOpenOption.APPEND
                 ),
@@ -106,6 +112,7 @@ class KivraCapturedRunWriter private constructor(
 
 private data class CapturedRunStart(
     val type: String = "start",
+    val protocolVersion: Int = CAPTURE_PROTOCOL_VERSION,
     val id: String,
     val projectPath: String,
     val command: String,
@@ -114,6 +121,7 @@ private data class CapturedRunStart(
 )
 
 private data class CapturedRunIndex(
+    val protocolVersion: Int = CAPTURE_PROTOCOL_VERSION,
     val id: String,
     val projectPath: String,
     val command: String,
@@ -123,6 +131,7 @@ private data class CapturedRunIndex(
 
 private data class CapturedRunEvent(
     val type: String = "output",
+    val protocolVersion: Int = CAPTURE_PROTOCOL_VERSION,
     val time: String = Instant.now().toString(),
     val pid: Int? = null,
     val ppid: Int? = null,
@@ -132,6 +141,8 @@ private data class CapturedRunEvent(
 )
 
 private data class CapturedRunEnd(
+    val type: String = "end",
+    val protocolVersion: Int = CAPTURE_PROTOCOL_VERSION,
     val finishedAt: String,
     val exitCode: Int?,
     val durationMs: Long

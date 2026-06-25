@@ -12,6 +12,12 @@ use std::{
 };
 use thiserror::Error;
 
+const KIVRA_HOME_DIRECTORY: &str = ".kivra";
+const CAPTURED_RUNS_DIRECTORY: &str = "captured-runs";
+const CAPTURE_START_FILE: &str = "start.json";
+const CAPTURE_EVENTS_FILE: &str = "events.jsonl";
+const CAPTURE_END_FILE: &str = "end.json";
+
 #[derive(Debug, Error)]
 enum KivraError {
     #[error("Path does not exist")]
@@ -110,6 +116,8 @@ struct CapturedRunResult {
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct CapturedRunStart {
+    #[allow(dead_code)]
+    protocol_version: Option<u8>,
     id: String,
     project_path: Option<String>,
     command: String,
@@ -119,12 +127,17 @@ struct CapturedRunStart {
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct CapturedRunEnd {
+    #[allow(dead_code)]
+    protocol_version: Option<u8>,
     exit_code: Option<i32>,
     duration_ms: Option<u128>,
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct CapturedRunEvent {
+    #[allow(dead_code)]
+    protocol_version: Option<u8>,
     stream: String,
     data: String,
 }
@@ -497,7 +510,7 @@ fn read_captured_runs(project_path: String) -> Result<Vec<CapturedRunResult>, Ki
     let mut runs = Vec::new();
 
     runs.extend(read_captured_runs_from_dir(
-        &root_path.join(".kivra").join("captured-runs"),
+        &root_path.join(KIVRA_HOME_DIRECTORY).join(CAPTURED_RUNS_DIRECTORY),
         Some(&root_path),
     )?);
     runs.extend(read_central_captured_runs(&root_path)?);
@@ -531,7 +544,7 @@ fn read_captured_runs_from_dir(
 }
 
 fn read_central_captured_runs(project_path: &Path) -> Result<Vec<CapturedRunResult>, KivraError> {
-    let central_path = kivra_home_dir()?.join("captured-runs");
+    let central_path = kivra_home_dir()?.join(CAPTURED_RUNS_DIRECTORY);
 
     if !central_path.exists() {
         return Ok(Vec::new());
@@ -590,14 +603,14 @@ fn start_trace_agent(project_paths: Vec<String>) -> Result<(), KivraError> {
 }
 
 fn read_captured_run(run_path: &Path) -> Result<CapturedRunResult, KivraError> {
-    let start_content = fs::read_to_string(run_path.join("start.json"))
+    let start_content = fs::read_to_string(run_path.join(CAPTURE_START_FILE))
         .map_err(|error| KivraError::Filesystem(error.to_string()))?;
     let start = serde_json::from_str::<CapturedRunStart>(&start_content)
         .map_err(|error| KivraError::Filesystem(error.to_string()))?;
-    let end = fs::read_to_string(run_path.join("end.json"))
+    let end = fs::read_to_string(run_path.join(CAPTURE_END_FILE))
         .ok()
         .and_then(|content| serde_json::from_str::<CapturedRunEnd>(&content).ok());
-    let events_content = fs::read_to_string(run_path.join("events.jsonl")).unwrap_or_default();
+    let events_content = fs::read_to_string(run_path.join(CAPTURE_EVENTS_FILE)).unwrap_or_default();
     let mut stdout = String::new();
     let mut stderr = String::new();
 
@@ -997,7 +1010,7 @@ fn kivra_home_dir() -> Result<PathBuf, KivraError> {
     let home = env::var("HOME")
         .map_err(|error| KivraError::Filesystem(format!("HOME is unavailable: {error}")))?;
 
-    Ok(PathBuf::from(home).join(".kivra"))
+    Ok(PathBuf::from(home).join(KIVRA_HOME_DIRECTORY))
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]

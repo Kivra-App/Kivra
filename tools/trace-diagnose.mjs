@@ -4,7 +4,13 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 
 const projectPath = process.argv[2] ?? null;
-const kivraHome = join(homedir(), ".kivra");
+const KIVRA_HOME_DIRECTORY = ".kivra";
+const CAPTURED_RUNS_DIRECTORY = "captured-runs";
+const CAPTURE_START_FILE = "start.json";
+const CAPTURE_EVENTS_FILE = "events.jsonl";
+const CAPTURE_INDEX_FILE = "index.jsonl";
+
+const kivraHome = join(homedir(), KIVRA_HOME_DIRECTORY);
 const projectsFile = join(kivraHome, "trace-projects.json");
 const shellIntegrationFile = join(kivraHome, "shell", "zsh-integration.zsh");
 const shellHelperFile = join(kivraHome, "trace-runtime", "shell-stream.mjs");
@@ -53,13 +59,13 @@ function printZshrcStatus() {
 }
 
 function printCapturedRuns(projectPath) {
-  const runsPath = join(projectPath, ".kivra", "captured-runs");
+  const runsPath = join(projectPath, KIVRA_HOME_DIRECTORY, CAPTURED_RUNS_DIRECTORY);
   console.log(runsPath);
   printRunsInPath(runsPath);
 }
 
 function printCentralCapturedRuns(projectPath) {
-  const rootPath = join(kivraHome, "captured-runs");
+  const rootPath = join(kivraHome, CAPTURED_RUNS_DIRECTORY);
   console.log(rootPath);
 
   if (!existsSync(rootPath)) {
@@ -83,14 +89,15 @@ function printRunsInPath(runsPath, projectPath = null) {
   }
 
   const runs = readdirSync(runsPath)
-    .filter((name) => name !== "index.jsonl")
+    .filter((name) => name !== CAPTURE_INDEX_FILE)
     .map((name) => {
       const runPath = join(runsPath, name);
-      const eventsPath = join(runPath, "events.jsonl");
-      const startPath = join(runPath, "start.json");
+      const eventsPath = join(runPath, CAPTURE_EVENTS_FILE);
+      const startPath = join(runPath, CAPTURE_START_FILE);
       const start = existsSync(startPath) ? JSON.parse(readFileSync(startPath, "utf8")) : {};
       return {
         name,
+        protocolVersion: start.protocolVersion ?? "legacy",
         projectPath: start.projectPath ?? null,
         events: existsSync(eventsPath) ? readFileSync(eventsPath, "utf8").split(/\r?\n/).filter(Boolean).length : 0,
         modifiedAt: statSync(runPath).mtimeMs
@@ -106,6 +113,6 @@ function printRunsInPath(runsPath, projectPath = null) {
   }
 
   for (const run of runs) {
-    console.log(`${run.name}: ${run.events} event(s)`);
+    console.log(`${run.name}: v${run.protocolVersion}, ${run.events} event(s)`);
   }
 }
