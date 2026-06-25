@@ -14,6 +14,8 @@ export type integrationStatus = {
   jetbrainsInstallPaths: string[];
   jetbrainsMissingInstallPaths: string[];
   jetbrainsPlugins: jetBrainsPluginStatus[];
+  vscodeInstalled: boolean;
+  vscodeCliPath: string | null;
 };
 
 export type jetBrainsPluginStatus = {
@@ -36,3 +38,6 @@ export const installJetBrainsPlugin = () =>
 
 export const installMissingJetBrainsPlugins = () =>
   invokeCommand<integrationInstallResult>("install_missing_jetbrains_plugins");
+
+export const installVsCodeExtension = () =>
+  invokeCommand<integrationInstallResult>("install_vscode_extension");

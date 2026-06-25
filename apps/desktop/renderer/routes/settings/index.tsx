@@ -8,6 +8,7 @@ import {
   useInstallJetBrainsPlugin,
   useInstallMissingJetBrainsPlugins,
   useInstallShellCapture,
+  useInstallVsCodeExtension,
   useIntegrationStatus,
   useUninstallShellCapture,
   type integrationInstallResult,
@@ -22,6 +23,7 @@ export const SettingsRoute = () => {
   const uninstallShell = useUninstallShellCapture();
   const installJetBrains = useInstallJetBrainsPlugin();
   const installMissingJetBrains = useInstallMissingJetBrainsPlugins();
+  const installVsCode = useInstallVsCodeExtension();
   const [shellAction, setShellAction] = useState<"install" | "uninstall" | null>(null);
   const [jetBrainsAction, setJetBrainsAction] = useState<"all" | "missing" | null>(null);
   const hasMissingJetBrainsPlugins = Boolean(
@@ -47,6 +49,8 @@ export const SettingsRoute = () => {
       : jetBrainsAction === "missing"
         ? installMissingJetBrains.error
         : null;
+  const vscodeResult = installVsCode.data;
+  const vscodeError = installVsCode.error;
   const handleInstallShell = () => {
     setShellAction("install");
     uninstallShell.reset();
@@ -70,6 +74,10 @@ export const SettingsRoute = () => {
     installJetBrains.reset();
     installMissingJetBrains.reset();
     installMissingJetBrains.mutate();
+  };
+  const handleInstallVsCode = () => {
+    installVsCode.reset();
+    installVsCode.mutate();
   };
 
   return (
@@ -167,6 +175,41 @@ export const SettingsRoute = () => {
               missingLabel={t("settings.jetbrains.missing")}
               emptyLabel={t("settings.jetbrains.emptyDetected")}
             />
+          </div>
+        </IntegrationCard>
+
+        <IntegrationCard
+          icon={<PlugZap className="h-5 w-5" />}
+          title={t("settings.vscode.title")}
+          description={t("settings.vscode.description")}
+          statusLabel={
+            integrationStatus.data?.vscodeInstalled
+              ? t("settings.vscode.ready")
+              : integrationStatus.data?.vscodeCliPath
+                ? t("settings.vscode.notLinked")
+                : t("settings.vscode.cliMissing")
+          }
+          detail={integrationStatus.data?.vscodeCliPath ?? undefined}
+          isInstalled={Boolean(integrationStatus.data?.vscodeInstalled)}
+          isPending={installVsCode.isPending}
+          buttonLabel={
+            integrationStatus.data?.vscodeInstalled
+              ? t("settings.vscode.reinstall")
+              : t("settings.vscode.install")
+          }
+          installingLabel={t("settings.installing")}
+          onInstall={handleInstallVsCode}
+          result={vscodeResult}
+          resultMessage={vscodeResult ? t(vscodeResult.messageKey) : undefined}
+          error={vscodeError}
+          errorFallback={t("settings.errorFallback")}
+        >
+          <div className="rounded-md border bg-muted/45 p-3 text-xs leading-5 text-muted-foreground">
+            <div className="mb-1 flex items-center gap-2 font-medium text-foreground">
+              <RefreshCw className="h-4 w-4" />
+              {t("settings.vscode.restartTitle")}
+            </div>
+            <p>{t("settings.vscode.restartDetail")}</p>
           </div>
         </IntegrationCard>
       </section>

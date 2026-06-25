@@ -5,6 +5,7 @@ import {
   installJetBrainsPlugin,
   installMissingJetBrainsPlugins,
   installShellCapture,
+  installVsCodeExtension,
   uninstallShellCapture
 } from "@/features/settings/services/integration-service";
 
@@ -43,6 +44,17 @@ export const useInstallMissingJetBrainsPlugins = () => {
 
   return useMutation({
     mutationFn: installMissingJetBrainsPlugins,
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: integrationStatusQueryKey });
+    }
+  });
+};
+
+export const useInstallVsCodeExtension = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: installVsCodeExtension,
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: integrationStatusQueryKey });
     }

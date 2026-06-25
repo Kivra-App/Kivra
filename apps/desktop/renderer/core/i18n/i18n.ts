@@ -200,6 +200,18 @@ export const resources = {
           missingPaths: "Missing",
           restartTitle: "IDE restart required",
           restartDetail: "Kivra installs the plugin into detected JetBrains IDE plugin folders. Restart the IDE after installation so Run/Debug capture can load."
+        },
+        vscode: {
+          title: "VS Code Run/Debug extension",
+          description: "Capture Debug Console output from Visual Studio Code Run and Debug sessions. Integrated terminal commands are still handled by zsh capture.",
+          ready: "Ready",
+          notLinked: "Not linked",
+          cliMissing: "CLI missing",
+          install: "Install VS Code extension",
+          reinstall: "Reinstall VS Code extension",
+          installSuccess: "VS Code extension installed. Restart or reload VS Code to activate it.",
+          restartTitle: "VS Code reload required",
+          restartDetail: "Kivra installs a local VSIX through the code CLI. Reload VS Code after installation so Run/Debug capture can load."
         }
       }
     }
@@ -402,6 +414,18 @@ export const resources = {
           missingPaths: "누락됨",
           restartTitle: "IDE 재시작 필요",
           restartDetail: "Kivra가 감지된 JetBrains IDE 플러그인 폴더에 플러그인을 설치합니다. 적용하려면 IDE를 재시작하세요."
+        },
+        vscode: {
+          title: "VS Code Run/Debug 확장",
+          description: "Visual Studio Code Run/Debug 세션의 Debug Console 출력을 캡처합니다. 내장 터미널 명령은 기존 zsh 캡처가 처리합니다.",
+          ready: "준비됨",
+          notLinked: "미연동",
+          cliMissing: "CLI 없음",
+          install: "VS Code 확장 설치",
+          reinstall: "VS Code 확장 재설치",
+          installSuccess: "VS Code 확장이 설치되었습니다. VS Code를 재시작하거나 창을 다시 로드하면 적용됩니다.",
+          restartTitle: "VS Code 재로드 필요",
+          restartDetail: "Kivra가 code CLI로 로컬 VSIX를 설치합니다. 설치 후 VS Code를 재로드해야 Run/Debug 캡처가 동작합니다."
         }
       }
     }

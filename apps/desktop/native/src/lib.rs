@@ -20,6 +20,7 @@ const CAPTURE_END_FILE: &str = "end.json";
 const SHELL_STREAM_HELPER_FILE: &str = "shell-stream.mjs";
 const SHELL_INTEGRATION_FILE: &str = "zsh-integration.zsh";
 const JETBRAINS_PLUGIN_DIRECTORY: &str = "kivra-jetbrains";
+const VSCODE_EXTENSION_ID: &str = "kivra.kivra-vscode";
 
 #[derive(Debug, Error)]
 enum KivraError {
@@ -172,6 +173,8 @@ struct IntegrationStatus {
     jetbrains_install_paths: Vec<String>,
     jetbrains_missing_install_paths: Vec<String>,
     jetbrains_plugins: Vec<JetBrainsPluginStatus>,
+    vscode_installed: bool,
+    vscode_cli_path: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -563,6 +566,10 @@ fn get_integration_status() -> Result<IntegrationStatus, KivraError> {
         .filter(|plugin| !plugin.installed)
         .map(|plugin| plugin.path.clone())
         .collect::<Vec<_>>();
+    let vscode_cli_path = vscode_cli_path();
+    let vscode_installed = vscode_cli_path
+        .as_ref()
+        .is_some_and(|path| vscode_extension_installed(path));
 
     Ok(IntegrationStatus {
         shell_installed: shell_integration_path.exists()
@@ -576,6 +583,8 @@ fn get_integration_status() -> Result<IntegrationStatus, KivraError> {
         jetbrains_install_paths,
         jetbrains_missing_install_paths,
         jetbrains_plugins,
+        vscode_installed,
+        vscode_cli_path: vscode_cli_path.map(|path| path.to_string_lossy().to_string()),
     })
 }
 
@@ -745,6 +754,39 @@ fn install_missing_jetbrains_plugins() -> Result<IntegrationInstallResult, Kivra
     Ok(IntegrationInstallResult {
         message_key: "settings.jetbrains.installMissingSuccess".to_string(),
         paths: installed_paths,
+        restart_required: true,
+    })
+}
+
+#[tauri::command]
+fn install_vscode_extension() -> Result<IntegrationInstallResult, KivraError> {
+    let repo_root = find_repo_root()
+        .ok_or_else(|| KivraError::Filesystem("Kivra repository root not found".to_string()))?;
+    let cli_path = vscode_cli_path()
+        .ok_or_else(|| KivraError::Command("Visual Studio Code CLI was not found.".to_string()))?;
+    let vsix_path = ensure_vscode_extension_vsix(&repo_root)?;
+    let output = Command::new(&cli_path)
+        .args([
+            "--install-extension",
+            &vsix_path.to_string_lossy(),
+            "--force",
+        ])
+        .output()
+        .map_err(|error| KivraError::Command(error.to_string()))?;
+
+    if !output.status.success() {
+        return Err(command_failure(
+            "Unable to install VS Code extension",
+            &output,
+        ));
+    }
+
+    Ok(IntegrationInstallResult {
+        message_key: "settings.vscode.installSuccess".to_string(),
+        paths: vec![
+            cli_path.to_string_lossy().to_string(),
+            vsix_path.to_string_lossy().to_string(),
+        ],
         restart_required: true,
     })
 }
@@ -1583,6 +1625,79 @@ fn install_jetbrains_plugin_to_roots(
     Ok(installed_paths)
 }
 
+fn ensure_vscode_extension_vsix(repo_root: &Path) -> Result<PathBuf, KivraError> {
+    let plugin_dir = repo_root.join("plugins").join("vscode");
+    let vsix_path = plugin_dir.join("build").join("kivra-vscode-0.1.0.vsix");
+
+    if vsix_path.exists() {
+        return Ok(vsix_path);
+    }
+
+    let output = Command::new("pnpm")
+        .args(["--filter", "kivra-vscode", "package"])
+        .current_dir(repo_root)
+        .output()
+        .map_err(|error| KivraError::Command(error.to_string()))?;
+
+    if !output.status.success() {
+        return Err(command_failure(
+            "Unable to package VS Code extension",
+            &output,
+        ));
+    }
+
+    if vsix_path.exists() {
+        Ok(vsix_path)
+    } else {
+        Err(KivraError::Filesystem(
+            "VS Code extension VSIX was not created.".to_string(),
+        ))
+    }
+}
+
+fn vscode_extension_installed(cli_path: &Path) -> bool {
+    let output = Command::new(cli_path)
+        .args(["--list-extensions", "--show-versions"])
+        .output();
+
+    let Ok(output) = output else {
+        return false;
+    };
+
+    if !output.status.success() {
+        return false;
+    }
+
+    String::from_utf8_lossy(&output.stdout).lines().any(|line| {
+        line == VSCODE_EXTENSION_ID || line.starts_with(&format!("{VSCODE_EXTENSION_ID}@"))
+    })
+}
+
+fn vscode_cli_path() -> Option<PathBuf> {
+    command_path("code").or_else(|| {
+        let macos_path =
+            PathBuf::from("/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code");
+
+        macos_path.exists().then_some(macos_path)
+    })
+}
+
+fn command_path(command: &str) -> Option<PathBuf> {
+    let output = Command::new("which").arg(command).output().ok()?;
+
+    if !output.status.success() {
+        return None;
+    }
+
+    let path = String::from_utf8_lossy(&output.stdout).trim().to_string();
+
+    if path.is_empty() {
+        None
+    } else {
+        Some(PathBuf::from(path))
+    }
+}
+
 fn jetbrains_plugin_roots() -> Result<Vec<JetBrainsPluginRoot>, KivraError> {
     let application_support = home_dir()?.join("Library").join("Application Support");
     let mut plugin_roots = Vec::new();
@@ -1819,7 +1934,8 @@ pub fn run() {
             install_shell_capture,
             uninstall_shell_capture,
             install_jetbrains_plugin,
-            install_missing_jetbrains_plugins
+            install_missing_jetbrains_plugins,
+            install_vscode_extension
         ])
         .run(tauri::generate_context!())
         .expect("error while running Kivra");

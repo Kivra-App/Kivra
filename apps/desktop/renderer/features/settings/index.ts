@@ -2,6 +2,7 @@ export {
   useInstallJetBrainsPlugin,
   useInstallMissingJetBrainsPlugins,
   useInstallShellCapture,
+  useInstallVsCodeExtension,
   useIntegrationStatus,
   useUninstallShellCapture
 } from "@/features/settings/hooks/use-integrations";
