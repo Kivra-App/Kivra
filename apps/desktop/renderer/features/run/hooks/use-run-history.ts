@@ -11,6 +11,8 @@ import {
 } from "@/features/run/services/run-history-service";
 import type { runResult } from "@/features/run/types/run";
 
+const autoRefreshIntervalMs = 300_000;
+
 export const useRunHistory = (projectId: string) => {
   const [runs, setRuns] = useState<runResult[]>(() => getStoredRuns(projectId));
 
@@ -18,6 +20,10 @@ export const useRunHistory = (projectId: string) => {
     let isActive = true;
 
     const loadRuns = async () => {
+      if (document.visibilityState !== "visible") {
+        return;
+      }
+
       const localRuns = getStoredRuns(projectId);
       const syncedRuns = await fetchSyncedRuns(projectId);
       const nextRuns = mergeRuns(localRuns, syncedRuns);
@@ -32,9 +38,11 @@ export const useRunHistory = (projectId: string) => {
     };
 
     void loadRuns();
+    const intervalId = window.setInterval(loadRuns, autoRefreshIntervalMs);
 
     return () => {
       isActive = false;
+      window.clearInterval(intervalId);
     };
   }, [projectId]);
 

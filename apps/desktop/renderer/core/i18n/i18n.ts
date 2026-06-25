@@ -1,6 +1,11 @@
 import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
 
+import {
+  type appLanguage,
+  resolveLanguage
+} from "@/core/settings/settings-store";
+
 export const resources = {
   en: {
     translation: {
@@ -11,7 +16,8 @@ export const resources = {
         dashboard: "Dashboard",
         login: "GitHub Login",
         currentProject: "Current Project",
-        openProjectFirst: "Open a project first"
+        openProjectFirst: "Open a project first",
+        selectProject: "Select Project"
       },
       runtime: {
         desktopRequired: "Native actions require the desktop app.",
@@ -48,9 +54,23 @@ export const resources = {
         runsToday: "Runs Today",
         openErrors: "Open Errors"
       },
+      profile: {
+        close: "Close profile",
+        language: "Language",
+        languageSystem: "System",
+        localOnly: "Local-only mode",
+        projects: "Projects",
+        refreshNow: "Refresh Now",
+        syncEnabled: "Cloud sync enabled",
+        title: "Profile"
+      },
       project: {
         addProject: "Add Project",
+        actions: "Actions",
         browseFolder: "Browse",
+        deleteConfirm: "Delete {{name}} from Kivra?",
+        deleteProject: "Delete Project",
+        deleteProjectDetail: "Remove this project from Kivra. Synced runs and notes for this project may also be removed from your cloud memory.",
         pathPlaceholder: "/Users/name/Projects/app",
         localImportTitle: "Local project",
         localImportDetail: "Register a folder on this machine for command runs and file memory.",
@@ -75,9 +95,11 @@ export const resources = {
         githubImportEmptyDetail: "Load your GitHub repositories, search the list, then import the projects you want Kivra to remember.",
         githubSearchPlaceholder: "Search repositories",
         githubSearchEmpty: "No repositories match your search.",
-        githubTokenRequired: "GitHub authorization is required. Sign in again to refresh OAuth access.",
+        githubTokenRequired: "GitHub authorization is required. Reconnect GitHub to refresh repository access.",
+        githubForbidden: "GitHub denied this request. Reconnect GitHub or check repository access.",
         githubProjectsEmpty: "No GitHub repositories found.",
         githubPrivate: "Private",
+        githubReconnect: "Reconnect GitHub",
         githubRepository: "repo",
         githubImport: "Import",
         githubImported: "Imported",
@@ -113,6 +135,7 @@ export const resources = {
         truncated: "Large file truncated for inspection.",
         viewModes: {
           code: "Code",
+          nodes: "Nodes",
           preview: "Preview"
         }
       },
@@ -172,7 +195,8 @@ export const resources = {
         dashboard: "대시보드",
         login: "GitHub 로그인",
         currentProject: "현재 프로젝트",
-        openProjectFirst: "먼저 프로젝트를 열어주세요"
+        openProjectFirst: "먼저 프로젝트를 열어주세요",
+        selectProject: "프로젝트 선택"
       },
       runtime: {
         desktopRequired: "네이티브 기능은 데스크톱 앱에서만 동작합니다.",
@@ -209,9 +233,23 @@ export const resources = {
         runsToday: "오늘 실행",
         openErrors: "열린 에러"
       },
+      profile: {
+        close: "프로필 닫기",
+        language: "언어",
+        languageSystem: "시스템",
+        localOnly: "로컬 전용 모드",
+        projects: "프로젝트",
+        refreshNow: "지금 새로고침",
+        syncEnabled: "클라우드 동기화 켜짐",
+        title: "프로필"
+      },
       project: {
         addProject: "프로젝트 추가",
+        actions: "작업",
         browseFolder: "찾기",
+        deleteConfirm: "{{name}} 프로젝트를 Kivra에서 삭제할까요?",
+        deleteProject: "프로젝트 삭제",
+        deleteProjectDetail: "이 프로젝트를 Kivra에서 제거합니다. 동기화된 실행 기록과 노트도 클라우드 메모리에서 함께 삭제될 수 있습니다.",
         pathPlaceholder: "/Users/name/Projects/app",
         localImportTitle: "로컬 프로젝트",
         localImportDetail: "이 기기의 폴더를 등록해 명령 실행과 파일 메모리를 저장합니다.",
@@ -236,9 +274,11 @@ export const resources = {
         githubImportEmptyDetail: "GitHub 저장소를 불러온 뒤 검색하고, Kivra가 기억할 프로젝트를 선택해 등록하세요.",
         githubSearchPlaceholder: "저장소 검색",
         githubSearchEmpty: "검색 조건에 맞는 저장소가 없습니다.",
-        githubTokenRequired: "GitHub 권한이 필요합니다. OAuth 접근 권한을 갱신하려면 다시 로그인하세요.",
+        githubTokenRequired: "GitHub 권한이 필요합니다. 저장소 접근 권한을 갱신하려면 GitHub를 다시 연결하세요.",
+        githubForbidden: "GitHub가 요청을 거부했습니다. GitHub를 다시 연결하거나 저장소 접근 권한을 확인하세요.",
         githubProjectsEmpty: "불러올 GitHub 저장소가 없습니다.",
         githubPrivate: "비공개",
+        githubReconnect: "GitHub 다시 연결",
         githubRepository: "repo",
         githubImport: "가져오기",
         githubImported: "등록됨",
@@ -274,6 +314,7 @@ export const resources = {
         truncated: "큰 파일이라 일부만 표시합니다.",
         viewModes: {
           code: "코드",
+          nodes: "노드",
           preview: "프리뷰"
         }
       },
@@ -327,11 +368,19 @@ export const resources = {
 } as const;
 
 const getInitialLanguage = () => {
-  if (typeof navigator === "undefined") {
-    return "en";
+  if (typeof window === "undefined") {
+    return resolveLanguage("system");
   }
 
-  return navigator.language.toLowerCase().startsWith("ko") ? "ko" : "en";
+  try {
+    const storedSettings = JSON.parse(
+      window.localStorage.getItem("kivra.settings") ?? "{}"
+    ) as { state?: { language?: appLanguage } };
+
+    return resolveLanguage(storedSettings.state?.language ?? "system");
+  } catch {
+    return resolveLanguage("system");
+  }
 };
 
 void i18n.use(initReactI18next).init({
