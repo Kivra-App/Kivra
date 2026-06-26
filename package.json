@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "pnpm --filter @kivra/desktop dev",
+    "web:dev": "pnpm --filter @kivra/web dev",
     "build": "pnpm --filter @kivra/desktop build",
+    "web:build": "pnpm --filter @kivra/web build",
     "preview": "pnpm --filter @kivra/desktop preview",
     "desktop:tauri:dev": "pnpm --filter @kivra/desktop tauri:dev",
     "desktop:tauri:build": "pnpm --filter @kivra/desktop tauri:build",
