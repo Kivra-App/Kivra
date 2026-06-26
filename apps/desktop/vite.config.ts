@@ -20,8 +20,7 @@ export default defineConfig({
           react: ["react", "react-dom"],
           router: ["@tanstack/react-router", "@tanstack/react-query"],
           supabase: ["@supabase/supabase-js"],
-          motion: ["framer-motion"],
-          three: ["three"]
+          motion: ["framer-motion"]
         }
       }
     }

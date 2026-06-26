@@ -76,17 +76,17 @@ export const RunLogPanel = ({ run }: runLogPanelProps) => {
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.18, ease: "easeOut" }}
-      className="grid h-full min-h-0 gap-4 xl:grid-cols-[minmax(0,1fr)_280px]"
+      className="grid h-full min-h-0 min-w-0 grid-rows-[minmax(0,1fr)_auto] gap-4 2xl:grid-cols-[minmax(0,1fr)_260px] 2xl:grid-rows-1"
     >
-      <div className="flex min-h-0 flex-col rounded-md border bg-card">
+      <div className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-md border bg-card">
         <div className="border-b px-4 py-3">
           <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
+            <div className="min-w-0">
               <div className="flex items-center gap-2 text-sm font-medium">
                 <Terminal className="h-4 w-4" />
                 {t("runs.output")}
               </div>
-              <div className="mt-1 max-w-[110ch] font-mono text-xs text-muted-foreground">
+              <div className="mt-1 max-w-full break-all font-mono text-xs text-muted-foreground">
                 {run.command}
               </div>
             </div>
@@ -127,10 +127,10 @@ export const RunLogPanel = ({ run }: runLogPanelProps) => {
         </div>
 
         <div className="min-h-0 flex-1 overflow-auto p-4">
-          <div className="mx-auto w-full max-w-[110ch]">
+          <div className="h-full min-w-0">
             <pre
               className={cn(
-                "min-h-full rounded-md border bg-background p-4 font-mono text-xs leading-6",
+                "min-h-full min-w-0 rounded-md border bg-background p-4 font-mono text-xs leading-6",
                 wrapLines
                   ? "whitespace-pre-wrap break-words"
                   : "overflow-x-auto whitespace-pre"
@@ -142,7 +142,7 @@ export const RunLogPanel = ({ run }: runLogPanelProps) => {
         </div>
       </div>
 
-      <div className="grid gap-4 xl:content-start">
+      <div className="grid min-h-0 min-w-0 gap-4 overflow-auto 2xl:content-start">
         <aside className="rounded-md border bg-card p-3">
           <div className="mb-3 flex items-center gap-2 text-sm font-medium">
             <ListFilter className="h-4 w-4" />
@@ -230,11 +230,11 @@ const OutputStatCard = ({
         {label}
       </div>
       <div className="mt-2 grid grid-cols-2 gap-2">
-        <div>
+        <div className="min-w-0">
           <div className="text-[11px] text-muted-foreground">{t("runs.lines")}</div>
           <div className="text-sm font-medium">{lines.toLocaleString()}</div>
         </div>
-        <div>
+        <div className="min-w-0">
           <div className="text-[11px] text-muted-foreground">
             {t("runs.characters")}
           </div>

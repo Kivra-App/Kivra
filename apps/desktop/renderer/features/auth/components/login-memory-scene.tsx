@@ -1,211 +1,342 @@
-import { useEffect, useRef } from "react";
-import * as THREE from "three";
+import {
+  AlertTriangle,
+  Box,
+  CheckCircle2,
+  Clock3,
+  FolderOpen,
+  ListFilter,
+  Play,
+  Settings,
+  Terminal,
+  Timer
+} from "lucide-react";
+
+import { Logo } from "@/shared/ui/logo";
 
 type loginMemorySceneProps = {
   className?: string;
 };
 
-export const LoginMemoryScene = ({ className }: loginMemorySceneProps) => {
-  const containerRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    const container = containerRef.current;
-
-    if (!container) {
-      return undefined;
-    }
-
-    const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(36, 1, 0.1, 100);
-    camera.position.set(0, 0.18, 8.4);
-
-    const renderer = new THREE.WebGLRenderer({
-      alpha: true,
-      antialias: true,
-      powerPreference: "high-performance"
-    });
-    renderer.setClearColor(0x000000, 0);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.8));
-    container.appendChild(renderer.domElement);
-
-    const root = new THREE.Group();
-    root.position.set(0.14, 0.02, 0);
-    root.rotation.set(-0.08, -0.28, -0.1);
-    scene.add(root);
-
-    const nodeGeometry = new THREE.IcosahedronGeometry(0.048, 1);
-    const primaryMaterial = new THREE.MeshStandardMaterial({
-      color: 0xeef4ff,
-      emissive: 0x223044,
-      emissiveIntensity: 0.34,
-      roughness: 0.45,
-      metalness: 0.18
-    });
-    const accentMaterial = new THREE.MeshStandardMaterial({
-      color: 0x8ef2b1,
-      emissive: 0x235a36,
-      emissiveIntensity: 0.68,
-      roughness: 0.35,
-      metalness: 0.08
-    });
-    const mutedMaterial = new THREE.MeshStandardMaterial({
-      color: 0x7890b8,
-      emissive: 0x121c30,
-      emissiveIntensity: 0.38,
-      roughness: 0.65,
-      metalness: 0.1
-    });
-
-    const nodes: THREE.Mesh[] = [];
-    const nodePositions = createMemoryPositions();
-
-    for (const [index, position] of nodePositions.entries()) {
-      const node = new THREE.Mesh(
-        nodeGeometry,
-        index % 5 === 0
-          ? accentMaterial
-          : index % 3 === 0
-            ? primaryMaterial
-            : mutedMaterial
-      );
-      node.position.copy(position);
-      node.scale.setScalar(index % 5 === 0 ? 1.45 : 0.9);
-      nodes.push(node);
-      root.add(node);
-    }
-
-    const lineMaterial = new THREE.LineBasicMaterial({
-      color: 0x8ba7d8,
-      transparent: true,
-      opacity: 0.16
-    });
-    const highlightLineMaterial = new THREE.LineBasicMaterial({
-      color: 0x9df6b8,
-      transparent: true,
-      opacity: 0.34
-    });
-    const connections = createConnections(nodePositions);
-    const lineGeometries: THREE.BufferGeometry[] = [];
-
-    for (const [index, connection] of connections.entries()) {
-      const geometry = new THREE.BufferGeometry().setFromPoints(connection);
-      lineGeometries.push(geometry);
-      root.add(
-        new THREE.Line(
-          geometry,
-          index % 4 === 0 ? highlightLineMaterial : lineMaterial
-        )
-      );
-    }
-
-    const ribbonMaterial = new THREE.MeshStandardMaterial({
-      color: 0x1d2a41,
-      emissive: 0x0c1526,
-      emissiveIntensity: 0.5,
-      roughness: 0.82,
-      metalness: 0.2,
-      side: THREE.DoubleSide,
-      transparent: true,
-      opacity: 0.44
-    });
-    const ribbon = new THREE.Mesh(
-      new THREE.TorusKnotGeometry(1.62, 0.009, 156, 6, 2, 5),
-      ribbonMaterial
-    );
-    ribbon.rotation.set(0.42, 0.12, -0.32);
-    root.add(ribbon);
-
-    const ambientLight = new THREE.AmbientLight(0xbdd0ee, 1.1);
-    const keyLight = new THREE.PointLight(0xa8fac3, 8, 18);
-    keyLight.position.set(2.6, 2.1, 3.4);
-    const rimLight = new THREE.PointLight(0x7ea5ff, 5, 20);
-    rimLight.position.set(-3.4, -1.7, 4.2);
-    scene.add(ambientLight, keyLight, rimLight);
-
-    let frameId = 0;
-    const clock = new THREE.Clock();
-
-    const resize = () => {
-      const { height, width } = container.getBoundingClientRect();
-      const nextWidth = Math.max(width, 1);
-      const nextHeight = Math.max(height, 1);
-
-      renderer.setSize(nextWidth, nextHeight, false);
-      camera.aspect = nextWidth / nextHeight;
-      camera.updateProjectionMatrix();
-    };
-
-    const resizeObserver = new ResizeObserver(resize);
-    resizeObserver.observe(container);
-    resize();
-
-    const animate = () => {
-      const elapsed = clock.getElapsedTime();
-
-      root.rotation.y = -0.28 + elapsed * 0.035;
-      root.rotation.x = -0.08 + Math.sin(elapsed * 0.2) * 0.04;
-      ribbon.rotation.z = -0.32 + elapsed * 0.025;
-      ribbon.rotation.y = 0.12 + Math.sin(elapsed * 0.2) * 0.09;
-
-      for (const [index, node] of nodes.entries()) {
-        const pulse = 1 + Math.sin(elapsed * 0.9 + index) * 0.07;
-        node.scale.setScalar((index % 5 === 0 ? 1.45 : 0.9) * pulse);
-      }
-
-      renderer.render(scene, camera);
-      frameId = window.requestAnimationFrame(animate);
-    };
-
-    animate();
-
-    return () => {
-      window.cancelAnimationFrame(frameId);
-      resizeObserver.disconnect();
-      container.removeChild(renderer.domElement);
-      nodeGeometry.dispose();
-      primaryMaterial.dispose();
-      accentMaterial.dispose();
-      mutedMaterial.dispose();
-      lineMaterial.dispose();
-      highlightLineMaterial.dispose();
-      for (const geometry of lineGeometries) {
-        geometry.dispose();
-      }
-      ribbon.geometry.dispose();
-      ribbonMaterial.dispose();
-      renderer.dispose();
-    };
-  }, []);
-
-  return <div ref={containerRef} className={className} aria-hidden="true" />;
-};
-
-const createMemoryPositions = () => {
-  return Array.from({ length: 18 }, (_, index) => {
-    const lane = index % 3;
-    const step = Math.floor(index / 3);
-    const angle = step * 0.78 + lane * 0.34;
-    const radius = 0.78 + lane * 0.44;
-    const x = -1.12 + step * 0.38 + Math.cos(angle) * radius * 0.32;
-    const y = (lane - 1) * 0.58 + Math.sin(angle) * 0.42;
-    const z = Math.sin(angle * 0.86) * 0.74 + (lane - 1) * 0.18;
-
-    return new THREE.Vector3(x, y, z);
-  });
-};
-
-const createConnections = (positions: THREE.Vector3[]) => {
-  const connections: THREE.Vector3[][] = [];
-
-  for (let index = 0; index < positions.length; index += 1) {
-    if (index + 3 < positions.length) {
-      connections.push([positions[index], positions[index + 3]]);
-    }
-
-    if (index % 6 === 0 && index + 4 < positions.length) {
-      connections.push([positions[index], positions[index + 4]]);
-    }
+const runRows = [
+  {
+    command: "pnpm build",
+    duration: "11918 ms",
+    status: "FAILED",
+    time: "11:58:18",
+    tone: "danger"
+  },
+  {
+    command: "http://localhost:3000/",
+    duration: "12738 ms",
+    status: "SUCCESS",
+    time: "11:58:17",
+    tone: "default"
+  },
+  {
+    command: "Node.js Process",
+    duration: "1837 ms",
+    status: "SUCCESS",
+    time: "11:57:37",
+    tone: "default"
   }
+];
 
-  return connections;
+const outputLines = [
+  "pagePath=\"layout.tsx\">",
+  "  <SegmentTrieNode>",
+  "  <link>",
+  "  <script>",
+  "  <RootLayout>",
+  "    <html lang=\"ko\"",
+  "      className=\"outfit_2c3...\"",
+  "      suppressHydrationWarning={true}>"
+];
+
+export const LoginMemoryScene = ({ className }: loginMemorySceneProps) => {
+  return (
+    <div className={className} aria-hidden="true">
+      <div className="flex h-full items-center">
+        <div className="w-full min-w-[660px] origin-center -rotate-[1.5deg] rounded-[14px] border border-white/10 bg-card shadow-2xl shadow-black/50">
+          <div className="flex h-7 items-center gap-2 border-b border-border bg-background/80 px-3">
+            <span className="h-3 w-3 rounded-full bg-muted" />
+            <span className="h-3 w-3 rounded-full bg-muted" />
+            <span className="h-3 w-3 rounded-full bg-muted" />
+            <span className="ml-2 text-[11px] font-medium text-muted-foreground">
+              Kivra
+            </span>
+          </div>
+
+          <div className="grid h-[470px] grid-cols-[150px_minmax(0,1fr)] overflow-hidden rounded-b-[14px]">
+            <aside className="flex min-h-0 flex-col border-r bg-card">
+              <div className="border-b px-3 py-3">
+                <Logo size="sm" showTagline />
+              </div>
+              <nav className="space-y-1 p-2 text-[11px]">
+                <MockNavItem icon={<Box className="h-3.5 w-3.5" />} label="Dashboard" />
+                <MockNavItem
+                  active
+                  icon={<FolderOpen className="h-3.5 w-3.5" />}
+                  label="bigtablet-notiiv"
+                />
+                <MockNavItem
+                  icon={<Settings className="h-3.5 w-3.5" />}
+                  label="Settings"
+                />
+              </nav>
+              <div className="mt-auto border-t p-2">
+                <div className="flex items-center gap-2 rounded-md px-2 py-2">
+                  <span className="h-6 w-6 rounded-md border bg-background" />
+                  <span className="text-[11px] font-medium">8954sood</span>
+                </div>
+              </div>
+            </aside>
+
+            <main className="min-w-0 bg-background">
+              <header className="border-b bg-card px-4 py-3">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0">
+                    <h2 className="truncate text-sm font-semibold">
+                      bigtablet-notiiv-monorepo-web
+                    </h2>
+                    <p className="mt-1 truncate font-mono text-[11px] text-muted-foreground">
+                      /Users/byungjun/Desktop/web/bigtablet-insight-monorepo-web
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-4 gap-2 text-[10px]">
+                    <MockMetadata label="Runtime" value="Node.js" />
+                    <MockMetadata label="Framework" value="Vite" />
+                    <MockMetadata label="Package" value="pnpm" />
+                    <MockMetadata label="Branch" value="feat/log-search" />
+                  </div>
+                </div>
+
+                <div className="mt-3 flex items-center justify-between gap-3">
+                  <div className="flex rounded-md border bg-background p-1 text-[10px]">
+                    <span className="rounded px-2 py-1 text-muted-foreground">
+                      Explorer
+                    </span>
+                    <span className="rounded bg-muted px-2 py-1 text-foreground">
+                      Runs
+                    </span>
+                    <span className="rounded px-2 py-1 text-muted-foreground">
+                      Errors
+                    </span>
+                  </div>
+                  <div className="flex min-w-[230px] items-center gap-2">
+                    <div className="h-8 flex-1 rounded-md border bg-background px-3 py-2 font-mono text-[10px]">
+                      pnpm build
+                    </div>
+                    <div className="flex h-8 items-center gap-1 rounded-md bg-primary px-3 text-[10px] font-medium text-primary-foreground">
+                      <Play className="h-3.5 w-3.5" />
+                      Run
+                    </div>
+                  </div>
+                </div>
+              </header>
+
+              <section className="grid h-[355px] min-h-0 grid-cols-[210px_minmax(0,1fr)] gap-3 p-3">
+                <div className="min-h-0 overflow-hidden rounded-md border bg-card">
+                  <div className="border-b px-3 py-2">
+                    <div className="text-[11px] font-medium">Run History</div>
+                    <div className="mt-1 text-[10px] text-muted-foreground">
+                      33 runs
+                    </div>
+                  </div>
+                  <div className="space-y-2 p-2">
+                    {runRows.map((run) => (
+                      <MockRunRow key={`${run.command}-${run.time}`} {...run} />
+                    ))}
+                  </div>
+                </div>
+
+                <div className="grid min-h-0 min-w-0 grid-cols-[minmax(0,1fr)_170px] gap-3">
+                  <div className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-md border bg-card">
+                    <div className="border-b px-3 py-2">
+                      <div className="flex items-center gap-2 text-[11px] font-medium">
+                        <Terminal className="h-3.5 w-3.5" />
+                        Output
+                      </div>
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        <MockChip
+                          icon={<AlertTriangle className="h-3 w-3" />}
+                          label="Status"
+                          value="FAILED"
+                          tone="danger"
+                        />
+                        <MockChip
+                          icon={<Timer className="h-3 w-3" />}
+                          label="Duration"
+                          value="11918 ms"
+                        />
+                        <MockChip
+                          icon={<Clock3 className="h-3 w-3" />}
+                          label="Exit"
+                          value="-"
+                        />
+                      </div>
+                    </div>
+                    <pre className="min-h-0 flex-1 overflow-hidden bg-background p-3 font-mono text-[10px] leading-5 text-foreground">
+                      {outputLines.join("\n")}
+                    </pre>
+                  </div>
+
+                  <div className="min-h-0 space-y-3 overflow-hidden">
+                    <aside className="rounded-md border bg-card p-3">
+                      <div className="mb-2 flex items-center gap-2 text-[11px] font-medium">
+                        <ListFilter className="h-3.5 w-3.5" />
+                        Stream Overview
+                      </div>
+                      <MockStat label="STDOUT" lines="3" characters="141" />
+                      <MockStat
+                        label="STDERR"
+                        lines="53"
+                        characters="4,628"
+                        tone="danger"
+                      />
+                    </aside>
+                    <aside className="rounded-md border bg-card p-3">
+                      <div className="mb-2 flex items-center gap-2 text-[11px] font-medium">
+                        <AlertTriangle className="h-3.5 w-3.5 text-destructive" />
+                        Detected Errors
+                      </div>
+                      <div className="rounded-md border bg-background p-2 text-[10px] leading-4">
+                        &lt;HotReload globalError=&#123;...&#125; /&gt;
+                      </div>
+                    </aside>
+                  </div>
+                </div>
+              </section>
+            </main>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 };
+
+type mockNavItemProps = {
+  active?: boolean;
+  icon: JSX.Element;
+  label: string;
+};
+
+const MockNavItem = ({ active = false, icon, label }: mockNavItemProps) => (
+  <div
+    className={`flex h-8 items-center gap-2 rounded-md px-2 ${
+      active ? "bg-muted text-foreground" : "text-muted-foreground"
+    }`}
+  >
+    {icon}
+    <span className="truncate">{label}</span>
+  </div>
+);
+
+type mockMetadataProps = {
+  label: string;
+  value: string;
+};
+
+const MockMetadata = ({ label, value }: mockMetadataProps) => (
+  <div className="min-w-[72px] rounded-md border bg-background px-2 py-1.5">
+    <div className="text-muted-foreground">{label}</div>
+    <div className="mt-1 truncate font-mono text-foreground">{value}</div>
+  </div>
+);
+
+type mockRunRowProps = {
+  command: string;
+  duration: string;
+  status: string;
+  time: string;
+  tone: string;
+};
+
+const MockRunRow = ({
+  command,
+  duration,
+  status,
+  time,
+  tone
+}: mockRunRowProps) => (
+  <div className="rounded-md border bg-background p-2">
+    <div className="truncate font-mono text-[10px]">{command}</div>
+    <div className="mt-2 flex flex-wrap gap-1">
+      <span
+        className={`inline-flex items-center gap-1 rounded-md border px-1.5 py-1 text-[9px] ${
+          tone === "danger"
+            ? "border-destructive/30 bg-destructive/10 text-destructive"
+            : "bg-card text-muted-foreground"
+        }`}
+      >
+        {tone === "danger" ? (
+          <AlertTriangle className="h-3 w-3" />
+        ) : (
+          <CheckCircle2 className="h-3 w-3" />
+        )}
+        {status}
+      </span>
+      <span className="rounded-md border bg-card px-1.5 py-1 text-[9px] text-muted-foreground">
+        {duration}
+      </span>
+      <span className="rounded-md border bg-card px-1.5 py-1 text-[9px] text-muted-foreground">
+        {time}
+      </span>
+    </div>
+  </div>
+);
+
+type mockChipProps = {
+  icon: JSX.Element;
+  label: string;
+  tone?: "default" | "danger";
+  value: string;
+};
+
+const MockChip = ({
+  icon,
+  label,
+  tone = "default",
+  value
+}: mockChipProps) => (
+  <span
+    className={`inline-flex items-center gap-1.5 rounded-md border bg-background px-2 py-1 text-[10px] ${
+      tone === "danger" ? "text-destructive" : "text-foreground"
+    }`}
+  >
+    {icon}
+    <span className="text-muted-foreground">{label}</span>
+    <span className="font-medium">{value}</span>
+  </span>
+);
+
+type mockStatProps = {
+  characters: string;
+  label: string;
+  lines: string;
+  tone?: "default" | "danger";
+};
+
+const MockStat = ({
+  characters,
+  label,
+  lines,
+  tone = "default"
+}: mockStatProps) => (
+  <div
+    className={`mt-2 rounded-md border bg-background p-2 ${
+      tone === "danger" ? "border-destructive/30" : ""
+    }`}
+  >
+    <div className="text-[10px] font-medium text-muted-foreground">{label}</div>
+    <div className="mt-2 grid grid-cols-2 gap-2">
+      <div>
+        <div className="text-[9px] text-muted-foreground">Lines</div>
+        <div className="text-[11px] font-medium">{lines}</div>
+      </div>
+      <div>
+        <div className="text-[9px] text-muted-foreground">Chars</div>
+        <div className="text-[11px] font-medium">{characters}</div>
+      </div>
+    </div>
+  </div>
+);
