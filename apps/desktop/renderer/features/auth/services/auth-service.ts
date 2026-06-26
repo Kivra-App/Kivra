@@ -1,5 +1,9 @@
 import type { User } from "@supabase/supabase-js";
 
+import {
+  type appLanguage,
+  resolveLanguage
+} from "@/core/settings/settings-store";
 import { supabase } from "@/core/supabase/supabase-client";
 import { syncUserProfile } from "@/core/supabase/sync-service";
 import { invokeCommand, isTauriRuntime } from "@/core/tauri/tauri-client";
@@ -60,7 +64,7 @@ export const signInWithGithub = async (): Promise<authUser | null> => {
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "github",
     options: {
-      redirectTo: loopbackAuthCallbackUrl,
+      redirectTo: getLoopbackAuthCallbackUrl(),
       skipBrowserRedirect: true
     }
   });
@@ -172,4 +176,27 @@ const buildAuthUser = (user: User): authUser => ({
 
 const getGithubUserId = (user: User) => {
   return user.user_metadata.provider_id ?? user.user_metadata.sub ?? user.id;
+};
+
+const getLoopbackAuthCallbackUrl = () => {
+  const callbackUrl = new URL(loopbackAuthCallbackUrl);
+  callbackUrl.searchParams.set("lang", getAuthCallbackLanguage());
+
+  return callbackUrl.toString();
+};
+
+const getAuthCallbackLanguage = () => {
+  if (typeof window === "undefined") {
+    return "en";
+  }
+
+  try {
+    const storedSettings = JSON.parse(
+      window.localStorage.getItem("kivra.settings") ?? "{}"
+    ) as { state?: { language?: appLanguage } };
+
+    return resolveLanguage(storedSettings.state?.language ?? "system");
+  } catch {
+    return resolveLanguage("system");
+  }
 };
