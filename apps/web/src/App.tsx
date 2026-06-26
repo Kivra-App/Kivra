@@ -12,7 +12,7 @@ import {
 import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 
-import { HeroMemoryPanel } from "@/components/hero-memory-panel";
+import { LandingHeroDemo } from "@/components/landing-hero-demo";
 import { NodeViewMockup } from "@/components/node-view-mockup";
 
 const releaseUrl = "https://github.com/Kivra-App/Kivra/releases";
@@ -23,11 +23,11 @@ type language = "en" | "ko";
 const copy = {
   en: {
     appTitle: "Kivra",
-    badge: "Build. Fail. Remember.",
+    badge: "Developer memory for local projects.",
     caption: "File-aware project memory.",
     currentRelease: "Current release.",
     currentReleaseDetail:
-      "Only macOS is supported right now. Download the Apple Silicon build or browse the full release assets on GitHub.",
+      "Kivra is currently distributed for macOS on Apple Silicon.",
     currentReleaseMeta: "macOS (Apple Silicon) · GitHub Releases",
     download: "Download",
     downloadForMac: "Download for macOS",
@@ -36,18 +36,14 @@ const copy = {
       { text: "Visualize relationships.", title: "Understand" },
       { text: "Find previous solutions.", title: "Reuse" }
     ],
-    footerTagline: "Build. Fail. Remember.",
+    footerCopyright: "Copyright 2026 Sangmin Park",
+    footerLicense: "Licensed under AGPL-3.0.",
+    footerTagline: "Developer memory for local projects.",
     github: "GitHub",
     heroSubtextLine1: "Git remembers code.",
     heroSubtextLine2: "Kivra remembers why.",
     heroTitleLine1: "Remember everything",
     heroTitleLine2: "your project has already taught you.",
-    heroPanel: {
-      command: "Captured command",
-      error: "Detected error",
-      note: "Resolution note",
-      title: "Project memory"
-    },
     integrations: ["Desktop", "VS Code", "JetBrains", "Terminal"],
     license: "License",
     mockup: {
@@ -63,17 +59,21 @@ const copy = {
     navGithub: "GitHub",
     previewLabel: "Kivra product preview",
     releaseAsset: "Kivra_0.1.0_macOS_arm64.dmg",
-    releaseAssetLabel: "Release asset",
-    releaseLabel: "Current release target",
-    workflow: ["Build", "Fail", "Capture", "Understand", "Remember", "Reuse"]
+    releasePlatformLabel: "Platform",
+    releasePlatformValue: "macOS",
+    releaseSourceLabel: "Distribution",
+    releaseSourceValue: "GitHub Releases",
+    releaseVersionLabel: "Version",
+    releaseVersionValue: "0.1.0",
+    releaseLabel: "Current release target"
   },
   ko: {
     appTitle: "Kivra",
-    badge: "Build. Fail. Remember.",
+    badge: "로컬 프로젝트를 위한 개발자 메모리.",
     caption: "파일 단위로 기억하는 프로젝트 메모리.",
     currentRelease: "현재 릴리즈.",
     currentReleaseDetail:
-      "지금은 macOS만 지원합니다. Apple Silicon 빌드를 받거나 GitHub에서 전체 릴리즈 자산을 확인하세요.",
+      "현재 Kivra는 Apple Silicon 기반 macOS용으로 배포됩니다.",
     currentReleaseMeta: "macOS (Apple Silicon) · GitHub Releases",
     download: "다운로드",
     downloadForMac: "macOS 다운로드",
@@ -82,18 +82,14 @@ const copy = {
       { text: "관계를 시각화합니다.", title: "Understand" },
       { text: "이전 해결책을 다시 찾습니다.", title: "Reuse" }
     ],
-    footerTagline: "Build. Fail. Remember.",
+    footerCopyright: "Copyright 2026 Sangmin Park",
+    footerLicense: "AGPL-3.0 라이선스로 배포됩니다.",
+    footerTagline: "로컬 프로젝트를 위한 개발자 메모리.",
     github: "GitHub",
     heroSubtextLine1: "Git은 코드를 기억합니다.",
     heroSubtextLine2: "Kivra는 이유를 기억합니다.",
     heroTitleLine1: "프로젝트가 이미 가르쳐준 것들을",
     heroTitleLine2: "끝까지 기억하세요.",
-    heroPanel: {
-      command: "캡처된 명령",
-      error: "감지된 에러",
-      note: "해결 노트",
-      title: "프로젝트 메모리"
-    },
     integrations: ["Desktop", "VS Code", "JetBrains", "Terminal"],
     license: "라이선스",
     mockup: {
@@ -109,9 +105,13 @@ const copy = {
     navGithub: "GitHub",
     previewLabel: "Kivra 제품 미리보기",
     releaseAsset: "Kivra_0.1.0_macOS_arm64.dmg",
-    releaseAssetLabel: "릴리즈 자산",
-    releaseLabel: "현재 릴리즈 타깃",
-    workflow: ["Build", "Fail", "Capture", "Understand", "Remember", "Reuse"]
+    releasePlatformLabel: "플랫폼",
+    releasePlatformValue: "macOS",
+    releaseSourceLabel: "배포 위치",
+    releaseSourceValue: "GitHub Releases",
+    releaseVersionLabel: "버전",
+    releaseVersionValue: "0.1.0",
+    releaseLabel: "현재 릴리즈 타깃"
   }
 } satisfies Record<
   language,
@@ -125,18 +125,14 @@ const copy = {
     download: string;
     downloadForMac: string;
     features: Array<{ text: string; title: string }>;
+    footerCopyright: string;
+    footerLicense: string;
     footerTagline: string;
     github: string;
     heroSubtextLine1: string;
     heroSubtextLine2: string;
     heroTitleLine1: string;
     heroTitleLine2: string;
-    heroPanel: {
-      command: string;
-      error: string;
-      note: string;
-      title: string;
-    };
     integrations: string[];
     license: string;
     mockup: {
@@ -151,9 +147,13 @@ const copy = {
     navGithub: string;
     previewLabel: string;
     releaseAsset: string;
-    releaseAssetLabel: string;
+    releasePlatformLabel: string;
+    releasePlatformValue: string;
+    releaseSourceLabel: string;
+    releaseSourceValue: string;
+    releaseVersionLabel: string;
+    releaseVersionValue: string;
     releaseLabel: string;
-    workflow: string[];
   }
 >;
 
@@ -252,14 +252,7 @@ export const App = () => {
             </div>
           </motion.div>
 
-          <motion.div
-            initial={{ opacity: 0, scale: 0.985 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.55, ease: "easeOut", delay: 0.08 }}
-            className="min-h-[420px]"
-          >
-            <HeroMemoryPanel labels={t.heroPanel} />
-          </motion.div>
+          <LandingHeroDemo />
         </section>
 
         <section className="mx-auto max-w-[1440px] px-4 pb-6 sm:px-6 lg:px-8">
@@ -270,105 +263,90 @@ export const App = () => {
             transition={{ duration: 0.38, ease: "easeOut" }}
           >
             <NodeViewMockup labels={t.mockup} language={lang} />
-            <div className="border-x border-b border-border/80 bg-card px-4 py-3 text-sm text-muted-foreground">
-              {t.caption}
-            </div>
           </motion.div>
         </section>
 
-        <section className="mx-auto max-w-[1440px] px-4 py-12 sm:px-6 lg:px-8">
-          <div className="grid gap-8 border-y border-border/80 py-10 lg:grid-cols-3">
-            {features.map((feature, index) => (
-              <motion.article
-                key={feature.title}
-                initial={{ opacity: 0, y: 16 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, amount: 0.4 }}
-                transition={{ duration: 0.32, delay: index * 0.06, ease: "easeOut" }}
-                className="flex items-start gap-4"
-              >
-                <div className="grid h-10 w-10 shrink-0 place-items-center rounded-md border border-border/80 bg-card">
-                  <feature.icon className="h-4 w-4 text-muted-foreground" />
-                </div>
-                <div>
-                  <div className="text-sm font-semibold">{feature.title}</div>
-                  <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                    {feature.text}
-                  </p>
-                </div>
-              </motion.article>
-            ))}
-          </div>
-        </section>
-
-        <section className="mx-auto max-w-[1440px] px-4 py-10 sm:px-6 lg:px-8">
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, amount: 0.45 }}
-            transition={{ duration: 0.34, ease: "easeOut" }}
-            className="rounded-lg border border-border/80 bg-card px-4 py-6 sm:px-6"
-          >
-            <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
-              {t.workflow.map((step, index) => (
-                <div key={step} className="flex items-center gap-3">
-                  <span className="text-sm font-medium text-foreground">{step}</span>
-                  {index < t.workflow.length - 1 && (
-                    <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                  )}
-                </div>
-              ))}
-            </div>
-          </motion.div>
-        </section>
-
-        <section className="mx-auto max-w-[1440px] px-4 py-10 sm:px-6 lg:px-8">
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, amount: 0.45 }}
-            transition={{ duration: 0.34, ease: "easeOut" }}
-            className="rounded-lg border border-border/80 bg-card px-4 py-6 sm:px-6"
-          >
-            <div className="flex flex-wrap items-center gap-3 sm:gap-4">
+        <section className="mx-auto max-w-[1440px] px-4 py-8 sm:px-6 lg:px-8">
+          <div className="border-t border-border/80 pt-7">
+            <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
+              <div className="grid gap-5 md:grid-cols-3">
+                {features.map((feature, index) => (
+                  <motion.article
+                    key={feature.title}
+                    initial={{ opacity: 0, y: 14 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true, amount: 0.4 }}
+                    transition={{ duration: 0.28, delay: index * 0.05, ease: "easeOut" }}
+                    className="flex items-start gap-3"
+                  >
+                    <div className="grid h-9 w-9 shrink-0 place-items-center rounded-md border border-border/80 bg-card">
+                      <feature.icon className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                    <div>
+                      <div className="text-sm font-semibold">{feature.title}</div>
+                      <p className="mt-1.5 text-sm leading-6 text-muted-foreground">
+                        {feature.text}
+                      </p>
+                    </div>
+                  </motion.article>
+                ))}
+              </div>
+              <div className="flex flex-wrap items-center gap-2 lg:max-w-[360px] lg:justify-end">
               {integrations.map((integration) => (
                 <div
                   key={integration.label}
-                  className="inline-flex h-11 items-center gap-2 rounded-md border border-border/80 bg-background px-4 text-sm"
+                  className="inline-flex h-8 items-center gap-2 rounded-md border border-border/80 bg-background px-3 text-xs text-muted-foreground"
                 >
-                  <integration.icon className="h-4 w-4 text-muted-foreground" />
+                  <integration.icon className="h-3.5 w-3.5" />
                   <span>{integration.label}</span>
                 </div>
               ))}
+              </div>
             </div>
-          </motion.div>
+          </div>
         </section>
 
-        <section className="mx-auto max-w-[1440px] px-4 py-10 sm:px-6 lg:px-8">
+        <section className="mx-auto max-w-[1440px] px-4 pb-10 sm:px-6 lg:px-8">
           <motion.div
             initial={{ opacity: 0, y: 16 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0.45 }}
             transition={{ duration: 0.34, ease: "easeOut" }}
-            className="border-y border-border/80 py-8"
+            className="pb-8"
           >
-            <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(300px,420px)] lg:items-center">
-              <div>
+            <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(340px,420px)] lg:items-center">
+              <div className="max-w-2xl">
                 <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                   {t.releaseLabel}
                 </div>
                 <div className="mt-3 text-lg font-semibold">{t.currentRelease}</div>
-                <div className="mt-2 max-w-[56ch] text-sm leading-6 text-muted-foreground">
+                <div className="mt-2 text-sm leading-6 text-muted-foreground">
                   {t.currentReleaseDetail}
                 </div>
               </div>
               <div className="rounded-lg border border-border/80 bg-card p-4">
-                <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
-                  <span className="font-medium uppercase tracking-wide">{t.releaseAssetLabel}</span>
-                  <span>{t.currentReleaseMeta}</span>
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <div className="text-sm font-semibold">{t.currentReleaseMeta}</div>
+                    <div className="mt-1 text-xs text-muted-foreground">
+                      {t.releaseAsset}
+                    </div>
+                  </div>
+                  <Apple className="h-5 w-5 shrink-0 text-muted-foreground" />
                 </div>
-                <div className="mt-3 rounded-md border border-border/80 bg-card px-3 py-3 font-mono text-sm text-foreground">
-                  {t.releaseAsset}
+                <div className="mt-4 grid gap-2">
+                  <ReleaseMetaRow
+                    label={t.releaseVersionLabel}
+                    value={t.releaseVersionValue}
+                  />
+                  <ReleaseMetaRow
+                    label={t.releasePlatformLabel}
+                    value={t.releasePlatformValue}
+                  />
+                  <ReleaseMetaRow
+                    label={t.releaseSourceLabel}
+                    value={t.releaseSourceValue}
+                  />
                 </div>
               </div>
             </div>
@@ -376,22 +354,25 @@ export const App = () => {
         </section>
       </main>
 
-      <footer className="mx-auto flex max-w-[1440px] flex-col gap-4 border-t border-border/80 px-4 py-8 text-sm text-muted-foreground sm:px-6 sm:flex-row sm:items-center sm:justify-between lg:px-8">
+      <footer className="mx-auto grid max-w-[1440px] gap-5 border-t border-border/80 px-4 py-8 text-sm text-muted-foreground sm:px-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start lg:px-8">
         <div>
           <div className="font-medium text-foreground">{t.appTitle}</div>
           <div className="mt-1">{t.footerTagline}</div>
+          <div className="mt-3 max-w-[520px] text-xs leading-5">{t.footerLicense}</div>
         </div>
-        <div className="flex flex-wrap items-center gap-4">
-          <a href={releaseUrl} className="hover:text-foreground">
-            {t.github}
-          </a>
-          <a
-            href="https://github.com/Kivra-App/Kivra/blob/main/LICENSE"
-            className="hover:text-foreground"
-          >
-            {t.license}
-          </a>
-          <span>Copyright 2026 Kivra</span>
+        <div className="flex flex-col gap-3 lg:items-end">
+          <div className="flex flex-wrap items-center gap-4">
+            <a href={releaseUrl} className="hover:text-foreground">
+              {t.github}
+            </a>
+            <a
+              href="https://github.com/Kivra-App/Kivra/blob/main/LICENSE"
+              className="hover:text-foreground"
+            >
+              {t.license}
+            </a>
+          </div>
+          <div className="text-xs">{t.footerCopyright}</div>
         </div>
       </footer>
     </div>
@@ -418,6 +399,19 @@ const LinkButton = ({
   >
     {children}
   </a>
+);
+
+const ReleaseMetaRow = ({
+  label,
+  value
+}: {
+  label: string;
+  value: string;
+}) => (
+  <div className="flex items-center justify-between gap-4 rounded-md border border-border/80 bg-background px-3 py-2 text-xs">
+    <span className="text-muted-foreground">{label}</span>
+    <span className="font-medium text-foreground">{value}</span>
+  </div>
 );
 
 const LanguageToggle = ({
