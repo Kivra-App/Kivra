@@ -17,6 +17,7 @@ import { useGithubRepositories } from "@/features/project/hooks/use-github-repos
 import { useImportGithubProject } from "@/features/project/hooks/use-projects";
 import type { githubRepository } from "@/features/project/services/github-project-service";
 import { Button } from "@/shared/ui/button";
+import { Skeleton } from "@/shared/ui/skeleton";
 
 type githubProjectImportProps = {
   importedRepositoryUrls: Set<string>;
@@ -144,9 +145,24 @@ export const GitHubProjectImport = ({
         )}
 
         {githubRepositories.isFetching && (
-          <div className="flex items-center gap-2 p-4 text-xs text-muted-foreground">
-            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            {t("project.loadingGithubProjects")}
+          <div className="space-y-3 p-3">
+            {Array.from({ length: 4 }).map((_, index) => (
+              <div
+                key={index}
+                className="grid grid-cols-[1fr_auto] gap-4 rounded-md border p-3"
+              >
+                <div className="min-w-0">
+                  <Skeleton className="h-4 w-40" />
+                  <Skeleton className="mt-2 h-3 w-full max-w-[320px]" />
+                  <div className="mt-3 flex gap-2">
+                    <Skeleton className="h-5 w-14" />
+                    <Skeleton className="h-5 w-20" />
+                    <Skeleton className="h-5 w-12" />
+                  </div>
+                </div>
+                <Skeleton className="h-9 w-20" />
+              </div>
+            ))}
           </div>
         )}
 
