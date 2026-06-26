@@ -12,6 +12,7 @@ import { useProjectFile } from "@/features/project/hooks/use-project-file";
 import { buildCodeNodeGraph } from "@/features/project/services/node-graph-service";
 import type { project } from "@/features/project/types/project";
 import { cn } from "@/shared/lib/utils";
+import { Skeleton } from "@/shared/ui/skeleton";
 
 type projectFileViewerProps = {
   filePath: string | null;
@@ -63,7 +64,7 @@ export const ProjectFileViewer = ({ filePath, project }: projectFileViewerProps)
   }
 
   if (file.isLoading) {
-    return <EmptyState message={t("explorer.loadingFile")} />;
+    return <ProjectFileViewerSkeleton />;
   }
 
   if (file.isError || !file.data) {
@@ -127,6 +128,23 @@ export const ProjectFileViewer = ({ filePath, project }: projectFileViewerProps)
     </motion.div>
   );
 };
+
+const ProjectFileViewerSkeleton = () => (
+  <div className="h-full overflow-hidden rounded-md border bg-card">
+    <div className="border-b px-3 py-2">
+      <Skeleton className="h-5 w-64 max-w-full" />
+      <Skeleton className="mt-2 h-4 w-28" />
+    </div>
+    <div className="p-3">
+      {Array.from({ length: 16 }).map((_, index) => (
+        <div key={index} className="grid grid-cols-[48px_1fr] gap-0">
+          <Skeleton className="m-1 h-4 w-8" />
+          <Skeleton className="m-1 h-4 w-full" />
+        </div>
+      ))}
+    </div>
+  </div>
+);
 
 const getViewModes = ({
   hasNodeView,
@@ -270,7 +288,7 @@ const MarkdownPreview = ({ content }: { content: string }) => {
 };
 
 const canShowNodeView = (language: string) => {
-  return ["JSON", "Markdown", "Node", "Rust"].includes(language);
+  return ["JSON", "Node", "Rust"].includes(language);
 };
 
 const renderInlineMarkdown = (value: string) => {

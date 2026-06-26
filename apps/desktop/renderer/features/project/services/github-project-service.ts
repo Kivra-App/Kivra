@@ -166,8 +166,8 @@ export const createGithubProject = async (
     name: repo.name,
     path: repo.fullName,
     runtime: inferRuntime(repo.language),
-    framework: "GitHub",
-    packageManager: "remote",
+    framework: inferFramework(tree),
+    packageManager: inferPackageManager(tree),
     branch: repo.defaultBranch,
     repositoryUrl: repo.htmlUrl,
     createdAt: now,
@@ -297,15 +297,87 @@ const getRepoPath = (project: project) => {
 
 const inferRuntime = (language: string | null) => {
   if (!language) {
-    return "GitHub";
+    return "unknown";
   }
 
   if (["JavaScript", "TypeScript"].includes(language)) {
-    return "Node";
+    return "Node.js";
   }
 
   return language;
 };
+
+const inferFramework = (tree: projectNode) => {
+  const paths = collectProjectPaths(tree);
+
+  if (paths.has("apps/desktop/native/tauri.conf.json") || paths.has("tauri.conf.json")) {
+    return "Tauri";
+  }
+
+  if (hasPackageHint(paths, "next.config.js")
+    || hasPackageHint(paths, "next.config.mjs")
+    || hasPackageHint(paths, "next.config.ts")) {
+    return "Next.js";
+  }
+
+  if (hasPackageHint(paths, "vite.config.ts") || hasPackageHint(paths, "vite.config.js")) {
+    return "Vite";
+  }
+
+  if (paths.has("package.json")) {
+    return "Node.js";
+  }
+
+  return "Repository";
+};
+
+const inferPackageManager = (tree: projectNode) => {
+  const paths = collectProjectPaths(tree);
+
+  if (hasPackageHint(paths, "pnpm-lock.yaml") || paths.has("pnpm-workspace.yaml")) {
+    return "pnpm";
+  }
+
+  if (hasPackageHint(paths, "yarn.lock")) {
+    return "yarn";
+  }
+
+  if (hasPackageHint(paths, "package-lock.json")) {
+    return "npm";
+  }
+
+  if (hasPackageHint(paths, "bun.lockb")) {
+    return "bun";
+  }
+
+  if (hasPackageHint(paths, "Cargo.toml")) {
+    return "cargo";
+  }
+
+  return "unknown";
+};
+
+const collectProjectPaths = (node: projectNode): Set<string> => {
+  const paths = new Set<string>();
+
+  const visit = (currentNode: projectNode, prefix = "") => {
+    const currentPath = prefix ? `${prefix}/${currentNode.name}` : currentNode.name;
+    paths.add(currentPath);
+
+    for (const child of currentNode.children ?? []) {
+      visit(child, currentPath);
+    }
+  };
+
+  for (const child of node.children ?? []) {
+    visit(child);
+  }
+
+  return paths;
+};
+
+const hasPackageHint = (paths: Set<string>, filename: string) =>
+  Array.from(paths).some((path) => path === filename || path.endsWith(`/${filename}`));
 
 const decodeBase64Content = (content: string) => {
   const binary = window.atob(content.replace(/\n/g, ""));

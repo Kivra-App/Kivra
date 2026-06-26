@@ -1,13 +1,13 @@
 import {
   Background,
   ReactFlow,
-  type Edge,
-  type Node,
   type ReactFlowInstance
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import {
   Crosshair,
+  Expand,
+  LocateFixed,
   Maximize2,
   Minus,
   Pin,
@@ -18,7 +18,8 @@ import {
   X
 } from "lucide-react";
 import type { ReactNode } from "react";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 
 import { useNodeGraph } from "@/features/project/hooks/use-node-graph";
@@ -26,8 +27,7 @@ import type { codeNode, codeNodeCategory, codeNodeGraph } from "@/features/proje
 import { NODE_GROUPS, getFileName } from "@/features/project/services/node-graph-service";
 import type {
   nodeGraphFlowEdge,
-  nodeGraphFlowNode,
-  nodeGraphNodeData
+  nodeGraphFlowNode
 } from "@/features/project/services/node-layout-service";
 import { getConnectedNodeIds } from "@/features/project/services/node-layout-service";
 import { cn } from "@/shared/lib/utils";
@@ -56,6 +56,28 @@ export const CodeNodeViewer = ({ graph }: codeNodeViewerProps) => {
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
   const [isInspectorOpen, setIsInspectorOpen] = useState(false);
   const nodeGraph = useNodeGraph(graph);
+
+  useEffect(() => {
+    if (!isInspectorOpen) {
+      return;
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") {
+        return;
+      }
+
+      event.preventDefault();
+      event.stopPropagation();
+      setIsInspectorOpen(false);
+    };
+
+    window.addEventListener("keydown", handleKeyDown, true);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown, true);
+    };
+  }, [isInspectorOpen]);
   const localizedNodes = useMemo(
     () =>
       nodeGraph.nodes.map((node) => ({
@@ -80,20 +102,18 @@ export const CodeNodeViewer = ({ graph }: codeNodeViewerProps) => {
     selectedDetailNode.type === "more"
       ? new Set([selectedDetailNode.id, ...selectedDetailNode.connectedNodeIds])
       : getConnectedNodeIds(nodeGraph.selectedCodeNode);
-  const activeConnections = hoveredNodeId
-    ? getActiveNodeIds({ hoveredNodeId, nodes: localizedNodes, edges: nodeGraph.edges })
-    : selectedConnections;
   const renderedNodes = useMemo(
     () =>
       localizedNodes.map((node) => ({
         ...node,
         className: cn(
           node.className,
-          hoveredNodeId && !activeConnections.has(node.id) && "opacity-30",
+          hoveredNodeId && hoveredNodeId !== node.id && "opacity-25",
+          hoveredNodeId === node.id && "ring-2 ring-primary shadow-2xl shadow-primary/20",
           nodeGraph.selectedNodeId === node.id && "ring-2 ring-primary"
         )
       })),
-    [activeConnections, hoveredNodeId, localizedNodes, nodeGraph.selectedNodeId]
+    [hoveredNodeId, localizedNodes, nodeGraph.selectedNodeId]
   );
   const renderedEdges = useMemo(
     () =>
@@ -102,18 +122,18 @@ export const CodeNodeViewer = ({ graph }: codeNodeViewerProps) => {
         className: cn(
           edge.className,
           hoveredNodeId &&
-            ![edge.source, edge.target].includes(hoveredNodeId) &&
+            edge.source !== hoveredNodeId &&
+            edge.target !== hoveredNodeId &&
             "opacity-20",
+          hoveredNodeId &&
+            [edge.source, edge.target].includes(hoveredNodeId) &&
+            "stroke-primary/60",
           nodeGraph.selectedNodeId &&
             [edge.source, edge.target].includes(nodeGraph.selectedNodeId) &&
             "stroke-primary/70"
-        ),
-        label:
-          hoveredNodeId && [edge.source, edge.target].includes(hoveredNodeId)
-            ? t("explorer.nodeView.related")
-            : undefined
+        )
       })),
-    [hoveredNodeId, nodeGraph.edges, nodeGraph.selectedNodeId, t]
+    [hoveredNodeId, nodeGraph.edges, nodeGraph.selectedNodeId]
   );
 
   const focusNode = (nodeId: string) => {
@@ -126,9 +146,14 @@ export const CodeNodeViewer = ({ graph }: codeNodeViewerProps) => {
         return;
       }
 
+      const nodeWidth =
+        typeof node.style?.width === "number" ? node.style.width : 144;
+      const nodeHeight =
+        typeof node.style?.height === "number" ? node.style.height : 56;
+
       flowInstanceRef.current?.setCenter(
-        node.position.x + 72,
-        node.position.y + 28,
+        node.position.x + nodeWidth / 2,
+        node.position.y + nodeHeight / 2,
         { duration: 320, zoom: 1.08 }
       );
     });
@@ -149,6 +174,56 @@ export const CodeNodeViewer = ({ graph }: codeNodeViewerProps) => {
     mode: "embedded" | "inspector";
   }) => {
     const isInspector = mode === "inspector";
+    const toolbarButtons = isInspector
+      ? [
+          {
+            icon: <Plus className="h-4 w-4" />,
+            label: t("explorer.nodeView.controls.zoomIn"),
+            onClick: () => flowInstanceRef.current?.zoomIn({ duration: 0 })
+          },
+          {
+            icon: <Minus className="h-4 w-4" />,
+            label: t("explorer.nodeView.controls.zoomOut"),
+            onClick: () => flowInstanceRef.current?.zoomOut({ duration: 0 })
+          },
+          {
+            icon: <LocateFixed className="h-4 w-4" />,
+            label: t("explorer.nodeView.controls.fitView"),
+            onClick: fitView
+          },
+          {
+            icon: <RotateCcw className="h-4 w-4" />,
+            label: t("explorer.nodeView.controls.resetLayout"),
+            onClick: resetLayout
+          },
+          {
+            icon: <Crosshair className="h-4 w-4" />,
+            label: t("explorer.nodeView.controls.expandAll"),
+            onClick: nodeGraph.expandAll
+          },
+          {
+            icon: <Shrink className="h-4 w-4" />,
+            label: t("explorer.nodeView.controls.collapseAll"),
+            onClick: nodeGraph.collapseAll
+          }
+        ]
+      : [
+          {
+            icon: <Plus className="h-4 w-4" />,
+            label: t("explorer.nodeView.controls.zoomIn"),
+            onClick: () => flowInstanceRef.current?.zoomIn({ duration: 0 })
+          },
+          {
+            icon: <Minus className="h-4 w-4" />,
+            label: t("explorer.nodeView.controls.zoomOut"),
+            onClick: () => flowInstanceRef.current?.zoomOut({ duration: 0 })
+          },
+          {
+            icon: <LocateFixed className="h-4 w-4" />,
+            label: t("explorer.nodeView.controls.fitView"),
+            onClick: fitView
+          }
+        ];
 
     return (
       <section className="relative h-full min-h-0 bg-background">
@@ -158,31 +233,22 @@ export const CodeNodeViewer = ({ graph }: codeNodeViewerProps) => {
           </div>
         )}
         <div className="absolute right-3 top-3 z-20 flex items-center gap-1 rounded-md border bg-card/95 p-1 shadow-xl">
-          <GraphButton label={t("explorer.nodeView.controls.zoomIn")} onClick={() => flowInstanceRef.current?.zoomIn({ duration: 180 })}>
-            <Plus className="h-4 w-4" />
-          </GraphButton>
-          <GraphButton label={t("explorer.nodeView.controls.zoomOut")} onClick={() => flowInstanceRef.current?.zoomOut({ duration: 180 })}>
-            <Minus className="h-4 w-4" />
-          </GraphButton>
-          <GraphButton label={t("explorer.nodeView.controls.fitView")} onClick={fitView}>
-            <Maximize2 className="h-4 w-4" />
-          </GraphButton>
-          <GraphButton label={t("explorer.nodeView.controls.resetLayout")} onClick={resetLayout}>
-            <RotateCcw className="h-4 w-4" />
-          </GraphButton>
-          <GraphButton label={t("explorer.nodeView.controls.expandAll")} onClick={nodeGraph.expandAll}>
-            <Crosshair className="h-4 w-4" />
-          </GraphButton>
-          <GraphButton label={t("explorer.nodeView.controls.collapseAll")} onClick={nodeGraph.collapseAll}>
-            <Shrink className="h-4 w-4" />
-          </GraphButton>
+          {toolbarButtons.map((button) => (
+            <GraphButton
+              key={button.label}
+              label={button.label}
+              onClick={button.onClick}
+            >
+              {button.icon}
+            </GraphButton>
+          ))}
           {isInspector ? (
             <GraphButton label={t("explorer.nodeView.controls.closeInspector")} onClick={() => setIsInspectorOpen(false)}>
               <X className="h-4 w-4" />
             </GraphButton>
           ) : (
             <GraphButton label={t("explorer.nodeView.controls.openInspector")} onClick={() => setIsInspectorOpen(true)}>
-              <Maximize2 className="h-4 w-4" />
+              <Expand className="h-4 w-4" />
             </GraphButton>
           )}
         </div>
@@ -190,14 +256,17 @@ export const CodeNodeViewer = ({ graph }: codeNodeViewerProps) => {
         <ReactFlow
           colorMode="dark"
           edges={renderedEdges}
-          fitView
           maxZoom={1.8}
           minZoom={0.35}
           nodes={renderedNodes}
           nodesDraggable
           onInit={(instance) => {
             flowInstanceRef.current = instance;
+            requestAnimationFrame(() => {
+              instance.fitView({ duration: 0, padding: 0.18 });
+            });
           }}
+          onlyRenderVisibleElements={false}
           onNodeClick={(_, node) => focusNode(node.id)}
           onNodeDoubleClick={(_, node) => {
             const category = node.data.category;
@@ -228,46 +297,57 @@ export const CodeNodeViewer = ({ graph }: codeNodeViewerProps) => {
         </div>
       )}
 
-      {isInspectorOpen && (
-        <div className="fixed inset-0 z-50 flex min-w-[960px] flex-col bg-background">
-          <header className="flex h-14 shrink-0 items-center justify-between border-b bg-card px-4">
-            <div className="min-w-0">
-              <div className="truncate text-sm font-semibold">
-                {getFileName(graph.fileNode.filePath)}
-              </div>
-              <div className="mt-0.5 font-mono text-[11px] text-muted-foreground">
-                {t("explorer.nodeView.inspectorTitle")} · {t("explorer.nodeView.parsedNodes", { count: graph.totalNodeCount })}
+      {isInspectorOpen &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-[100] bg-black/60 p-4 backdrop-blur-sm xl:p-6"
+            onClick={() => setIsInspectorOpen(false)}
+          >
+            <div className="flex h-full min-h-0 w-full flex-col overflow-hidden rounded-lg border border-border/70 bg-background shadow-2xl">
+              <header className="flex h-14 shrink-0 items-center justify-between border-b bg-card px-4">
+                <div className="min-w-0">
+                  <div className="truncate text-sm font-semibold">
+                    {getFileName(graph.fileNode.filePath)}
+                  </div>
+                  <div className="mt-0.5 font-mono text-[11px] text-muted-foreground">
+                    {t("explorer.nodeView.inspectorTitle")} · {t("explorer.nodeView.parsedNodes", { count: graph.totalNodeCount })}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className="flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+                  onClick={() => setIsInspectorOpen(false)}
+                  title={t("explorer.nodeView.controls.closeInspector")}
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </header>
+              <div
+                className="grid min-h-0 flex-1 grid-cols-[300px_minmax(0,1fr)_340px]"
+                onClick={(event) => event.stopPropagation()}
+              >
+                <NodeOutline
+                  graph={graph}
+                  expandedGroups={nodeGraph.expandedGroups}
+                  focusNode={focusNode}
+                  pinnedGroups={nodeGraph.pinnedGroups}
+                  searchQuery={nodeGraph.searchQuery}
+                  setSearchQuery={nodeGraph.setSearchQuery}
+                  toggleGroup={nodeGraph.toggleGroup}
+                  togglePinnedGroup={nodeGraph.togglePinnedGroup}
+                />
+                <div className="border-x">{graphCanvas({ mode: "inspector" })}</div>
+                <NodeDetail
+                  graph={graph}
+                  node={selectedDetailNode}
+                  visibleCodeNodes={nodeGraph.visibleCodeNodes}
+                />
               </div>
             </div>
-            <button
-              type="button"
-              className="flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
-              onClick={() => setIsInspectorOpen(false)}
-              title={t("explorer.nodeView.controls.closeInspector")}
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </header>
-          <div className="grid min-h-0 flex-1 grid-cols-[280px_minmax(0,1fr)_320px]">
-            <NodeOutline
-              graph={graph}
-              expandedGroups={nodeGraph.expandedGroups}
-              focusNode={focusNode}
-              pinnedGroups={nodeGraph.pinnedGroups}
-              searchQuery={nodeGraph.searchQuery}
-              setSearchQuery={nodeGraph.setSearchQuery}
-              toggleGroup={nodeGraph.toggleGroup}
-              togglePinnedGroup={nodeGraph.togglePinnedGroup}
-            />
-            <div className="border-x">{graphCanvas({ mode: "inspector" })}</div>
-            <NodeDetail
-              graph={graph}
-              node={selectedDetailNode}
-              visibleCodeNodes={nodeGraph.visibleCodeNodes}
-            />
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body
+        )}
     </>
   );
 };
@@ -463,38 +543,6 @@ const GraphButton = ({
     {children}
   </button>
 );
-
-const getActiveNodeIds = ({
-  edges,
-  hoveredNodeId,
-  nodes
-}: {
-  edges: Edge[];
-  hoveredNodeId: string;
-  nodes: Array<Node<nodeGraphNodeData>>;
-}) => {
-  const activeIds = new Set([hoveredNodeId]);
-
-  for (const edge of edges) {
-    if (edge.source === hoveredNodeId) {
-      activeIds.add(edge.target);
-    }
-
-    if (edge.target === hoveredNodeId) {
-      activeIds.add(edge.source);
-    }
-  }
-
-  for (const node of nodes) {
-    const codeNode = node.data.codeNode;
-
-    if (codeNode?.connectedNodeIds.includes(hoveredNodeId)) {
-      activeIds.add(node.id);
-    }
-  }
-
-  return activeIds;
-};
 
 const getNodeLabel = (
   node: nodeGraphFlowNode,
