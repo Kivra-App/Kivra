@@ -1,0 +1,12 @@
+pub(crate) const KIVRA_HOME_DIRECTORY: &str = ".kivra";
+pub(crate) const CAPTURED_RUNS_DIRECTORY: &str = "captured-runs";
+pub(crate) const CAPTURE_START_FILE: &str = "start.json";
+pub(crate) const CAPTURE_EVENTS_FILE: &str = "events.jsonl";
+pub(crate) const CAPTURE_END_FILE: &str = "end.json";
+pub(crate) const SHELL_STREAM_HELPER_FILE: &str = "shell-stream.mjs";
+pub(crate) const SHELL_INTEGRATION_FILE: &str = "zsh-integration.zsh";
+pub(crate) const JETBRAINS_PLUGIN_DIRECTORY: &str = "kivra-jetbrains";
+pub(crate) const VSCODE_EXTENSION_ID: &str = "kivra.kivra-vscode";
+pub(crate) const RUN_OUTPUT_EVENT: &str = "kivra://run-output";
+pub(crate) const RUN_COMPLETED_EVENT: &str = "kivra://run-completed";
+pub(crate) const RUN_FAILED_EVENT: &str = "kivra://run-failed";
