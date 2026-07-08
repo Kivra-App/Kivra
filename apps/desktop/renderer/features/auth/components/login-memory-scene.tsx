@@ -1,7 +1,6 @@
 import {
   AlertTriangle,
   Box,
-  CheckCircle2,
   Clock3,
   FolderOpen,
   ListFilter,
@@ -16,41 +15,6 @@ import { Logo } from "@/shared/ui/logo";
 type loginMemorySceneProps = {
   className?: string;
 };
-
-const runRows = [
-  {
-    command: "pnpm build",
-    duration: "11918 ms",
-    status: "FAILED",
-    time: "11:58:18",
-    tone: "danger"
-  },
-  {
-    command: "http://localhost:3000/",
-    duration: "12738 ms",
-    status: "SUCCESS",
-    time: "11:58:17",
-    tone: "default"
-  },
-  {
-    command: "Node.js Process",
-    duration: "1837 ms",
-    status: "SUCCESS",
-    time: "11:57:37",
-    tone: "default"
-  }
-];
-
-const outputLines = [
-  "pagePath=\"layout.tsx\">",
-  "  <SegmentTrieNode>",
-  "  <link>",
-  "  <script>",
-  "  <RootLayout>",
-  "    <html lang=\"ko\"",
-  "      className=\"outfit_2c3...\"",
-  "      suppressHydrationWarning={true}>"
-];
 
 export const LoginMemoryScene = ({ className }: loginMemorySceneProps) => {
   return (
@@ -72,21 +36,14 @@ export const LoginMemoryScene = ({ className }: loginMemorySceneProps) => {
                 <Logo size="sm" showTagline />
               </div>
               <nav className="space-y-1 p-2 text-[11px]">
-                <MockNavItem icon={<Box className="h-3.5 w-3.5" />} label="Dashboard" />
-                <MockNavItem
-                  active
-                  icon={<FolderOpen className="h-3.5 w-3.5" />}
-                  label="bigtablet-notiiv"
-                />
-                <MockNavItem
-                  icon={<Settings className="h-3.5 w-3.5" />}
-                  label="Settings"
-                />
+                <SceneNavItem icon={<Box className="h-3.5 w-3.5" />} />
+                <SceneNavItem active icon={<FolderOpen className="h-3.5 w-3.5" />} />
+                <SceneNavItem icon={<Settings className="h-3.5 w-3.5" />} />
               </nav>
               <div className="mt-auto border-t p-2">
                 <div className="flex items-center gap-2 rounded-md px-2 py-2">
                   <span className="h-6 w-6 rounded-md border bg-background" />
-                  <span className="text-[11px] font-medium">8954sood</span>
+                  <span className="h-2 w-16 rounded bg-muted" />
                 </div>
               </div>
             </aside>
@@ -95,18 +52,13 @@ export const LoginMemoryScene = ({ className }: loginMemorySceneProps) => {
               <header className="border-b bg-card px-4 py-3">
                 <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0">
-                    <h2 className="truncate text-sm font-semibold">
-                      bigtablet-notiiv-monorepo-web
-                    </h2>
-                    <p className="mt-1 truncate font-mono text-[11px] text-muted-foreground">
-                      /Users/byungjun/Desktop/web/bigtablet-insight-monorepo-web
-                    </p>
+                    <div className="h-4 w-56 rounded bg-muted" />
+                    <div className="mt-2 h-3 w-72 rounded bg-muted/70" />
                   </div>
                   <div className="grid grid-cols-4 gap-2 text-[10px]">
-                    <MockMetadata label="Runtime" value="Node.js" />
-                    <MockMetadata label="Framework" value="Vite" />
-                    <MockMetadata label="Package" value="pnpm" />
-                    <MockMetadata label="Branch" value="feat/log-search" />
+                    {Array.from({ length: 4 }).map((_, index) => (
+                      <SceneMetadata key={index} />
+                    ))}
                   </div>
                 </div>
 
@@ -123,12 +75,12 @@ export const LoginMemoryScene = ({ className }: loginMemorySceneProps) => {
                     </span>
                   </div>
                   <div className="flex min-w-[230px] items-center gap-2">
-                    <div className="h-8 flex-1 rounded-md border bg-background px-3 py-2 font-mono text-[10px]">
-                      pnpm build
+                    <div className="h-8 flex-1 rounded-md border bg-background px-3 py-2">
+                      <div className="mt-1 h-2 w-20 rounded bg-muted" />
                     </div>
                     <div className="flex h-8 items-center gap-1 rounded-md bg-primary px-3 text-[10px] font-medium text-primary-foreground">
                       <Play className="h-3.5 w-3.5" />
-                      Run
+                      <span className="h-2 w-7 rounded bg-primary-foreground/70" />
                     </div>
                   </div>
                 </div>
@@ -137,14 +89,12 @@ export const LoginMemoryScene = ({ className }: loginMemorySceneProps) => {
               <section className="grid h-[355px] min-h-0 grid-cols-[210px_minmax(0,1fr)] gap-3 p-3">
                 <div className="min-h-0 overflow-hidden rounded-md border bg-card">
                   <div className="border-b px-3 py-2">
-                    <div className="text-[11px] font-medium">Run History</div>
-                    <div className="mt-1 text-[10px] text-muted-foreground">
-                      33 runs
-                    </div>
+                    <div className="h-3 w-20 rounded bg-muted" />
+                    <div className="mt-2 h-2 w-10 rounded bg-muted/70" />
                   </div>
                   <div className="space-y-2 p-2">
-                    {runRows.map((run) => (
-                      <MockRunRow key={`${run.command}-${run.time}`} {...run} />
+                    {Array.from({ length: 3 }).map((_, index) => (
+                      <SceneRunRow key={index} tone={index === 0 ? "danger" : "default"} />
                     ))}
                   </div>
                 </div>
@@ -157,50 +107,42 @@ export const LoginMemoryScene = ({ className }: loginMemorySceneProps) => {
                         Output
                       </div>
                       <div className="mt-2 flex flex-wrap gap-1.5">
-                        <MockChip
+                        <SceneChip
                           icon={<AlertTriangle className="h-3 w-3" />}
-                          label="Status"
-                          value="FAILED"
                           tone="danger"
                         />
-                        <MockChip
-                          icon={<Timer className="h-3 w-3" />}
-                          label="Duration"
-                          value="11918 ms"
-                        />
-                        <MockChip
-                          icon={<Clock3 className="h-3 w-3" />}
-                          label="Exit"
-                          value="-"
-                        />
+                        <SceneChip icon={<Timer className="h-3 w-3" />} />
+                        <SceneChip icon={<Clock3 className="h-3 w-3" />} />
                       </div>
                     </div>
-                    <pre className="min-h-0 flex-1 overflow-hidden bg-background p-3 font-mono text-[10px] leading-5 text-foreground">
-                      {outputLines.join("\n")}
-                    </pre>
+                    <div className="min-h-0 flex-1 space-y-2 overflow-hidden bg-background p-3">
+                      {Array.from({ length: 8 }).map((_, index) => (
+                        <div
+                          key={index}
+                          className="h-2 rounded bg-muted"
+                          style={{ width: `${88 - (index % 4) * 13}%` }}
+                        />
+                      ))}
+                    </div>
                   </div>
 
                   <div className="min-h-0 space-y-3 overflow-hidden">
                     <aside className="rounded-md border bg-card p-3">
                       <div className="mb-2 flex items-center gap-2 text-[11px] font-medium">
                         <ListFilter className="h-3.5 w-3.5" />
-                        Stream Overview
+                        <span className="h-2 w-20 rounded bg-muted" />
                       </div>
-                      <MockStat label="STDOUT" lines="3" characters="141" />
-                      <MockStat
-                        label="STDERR"
-                        lines="53"
-                        characters="4,628"
-                        tone="danger"
-                      />
+                      <SceneStat />
+                      <SceneStat tone="danger" />
                     </aside>
                     <aside className="rounded-md border bg-card p-3">
                       <div className="mb-2 flex items-center gap-2 text-[11px] font-medium">
                         <AlertTriangle className="h-3.5 w-3.5 text-destructive" />
-                        Detected Errors
+                        <span className="h-2 w-20 rounded bg-muted" />
                       </div>
-                      <div className="rounded-md border bg-background p-2 text-[10px] leading-4">
-                        &lt;HotReload globalError=&#123;...&#125; /&gt;
+                      <div className="space-y-2 rounded-md border bg-background p-2">
+                        <div className="h-2 w-full rounded bg-muted" />
+                        <div className="h-2 w-2/3 rounded bg-muted" />
                       </div>
                     </aside>
                   </div>
@@ -214,129 +156,74 @@ export const LoginMemoryScene = ({ className }: loginMemorySceneProps) => {
   );
 };
 
-type mockNavItemProps = {
+const SceneNavItem = ({
+  active = false,
+  icon
+}: {
   active?: boolean;
   icon: JSX.Element;
-  label: string;
-};
-
-const MockNavItem = ({ active = false, icon, label }: mockNavItemProps) => (
+}) => (
   <div
     className={`flex h-8 items-center gap-2 rounded-md px-2 ${
       active ? "bg-muted text-foreground" : "text-muted-foreground"
     }`}
   >
     {icon}
-    <span className="truncate">{label}</span>
+    <span className="h-2 flex-1 rounded bg-current opacity-30" />
   </div>
 );
 
-type mockMetadataProps = {
-  label: string;
-  value: string;
-};
-
-const MockMetadata = ({ label, value }: mockMetadataProps) => (
+const SceneMetadata = () => (
   <div className="min-w-[72px] rounded-md border bg-background px-2 py-1.5">
-    <div className="text-muted-foreground">{label}</div>
-    <div className="mt-1 truncate font-mono text-foreground">{value}</div>
+    <div className="h-2 w-10 rounded bg-muted" />
+    <div className="mt-2 h-2 w-12 rounded bg-muted/70" />
   </div>
 );
 
-type mockRunRowProps = {
-  command: string;
-  duration: string;
-  status: string;
-  time: string;
-  tone: string;
-};
-
-const MockRunRow = ({
-  command,
-  duration,
-  status,
-  time,
-  tone
-}: mockRunRowProps) => (
+const SceneRunRow = ({ tone }: { tone: "default" | "danger" }) => (
   <div className="rounded-md border bg-background p-2">
-    <div className="truncate font-mono text-[10px]">{command}</div>
-    <div className="mt-2 flex flex-wrap gap-1">
+    <div className="h-2 w-28 rounded bg-muted" />
+    <div className="mt-3 flex gap-1">
       <span
-        className={`inline-flex items-center gap-1 rounded-md border px-1.5 py-1 text-[9px] ${
+        className={`h-5 w-14 rounded-md border ${
           tone === "danger"
-            ? "border-destructive/30 bg-destructive/10 text-destructive"
-            : "bg-card text-muted-foreground"
+            ? "border-destructive/30 bg-destructive/10"
+            : "bg-card"
         }`}
-      >
-        {tone === "danger" ? (
-          <AlertTriangle className="h-3 w-3" />
-        ) : (
-          <CheckCircle2 className="h-3 w-3" />
-        )}
-        {status}
-      </span>
-      <span className="rounded-md border bg-card px-1.5 py-1 text-[9px] text-muted-foreground">
-        {duration}
-      </span>
-      <span className="rounded-md border bg-card px-1.5 py-1 text-[9px] text-muted-foreground">
-        {time}
-      </span>
+      />
+      <span className="h-5 w-12 rounded-md border bg-card" />
+      <span className="h-5 w-10 rounded-md border bg-card" />
     </div>
   </div>
 );
 
-type mockChipProps = {
-  icon: JSX.Element;
-  label: string;
-  tone?: "default" | "danger";
-  value: string;
-};
-
-const MockChip = ({
+const SceneChip = ({
   icon,
-  label,
-  tone = "default",
-  value
-}: mockChipProps) => (
+  tone = "default"
+}: {
+  icon: JSX.Element;
+  tone?: "default" | "danger";
+}) => (
   <span
     className={`inline-flex items-center gap-1.5 rounded-md border bg-background px-2 py-1 text-[10px] ${
       tone === "danger" ? "text-destructive" : "text-foreground"
     }`}
   >
     {icon}
-    <span className="text-muted-foreground">{label}</span>
-    <span className="font-medium">{value}</span>
+    <span className="h-2 w-10 rounded bg-muted" />
   </span>
 );
 
-type mockStatProps = {
-  characters: string;
-  label: string;
-  lines: string;
-  tone?: "default" | "danger";
-};
-
-const MockStat = ({
-  characters,
-  label,
-  lines,
-  tone = "default"
-}: mockStatProps) => (
+const SceneStat = ({ tone = "default" }: { tone?: "default" | "danger" }) => (
   <div
     className={`mt-2 rounded-md border bg-background p-2 ${
       tone === "danger" ? "border-destructive/30" : ""
     }`}
   >
-    <div className="text-[10px] font-medium text-muted-foreground">{label}</div>
-    <div className="mt-2 grid grid-cols-2 gap-2">
-      <div>
-        <div className="text-[9px] text-muted-foreground">Lines</div>
-        <div className="text-[11px] font-medium">{lines}</div>
-      </div>
-      <div>
-        <div className="text-[9px] text-muted-foreground">Chars</div>
-        <div className="text-[11px] font-medium">{characters}</div>
-      </div>
+    <div className="h-2 w-14 rounded bg-muted" />
+    <div className="mt-3 grid grid-cols-2 gap-2">
+      <div className="h-7 rounded bg-muted/60" />
+      <div className="h-7 rounded bg-muted/60" />
     </div>
   </div>
 );
