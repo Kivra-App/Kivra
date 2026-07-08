@@ -1,39 +1,28 @@
 import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { AnimatePresence, motion } from "framer-motion";
-import { BookOpenText, FolderGit2, GitBranch, Loader2, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { KnowledgeList, ProjectMemo, ResolutionNotes } from "@/features/docs";
 import { getResolvedErrorIds } from "@/features/docs/services/note-service";
-import { ErrorTable, type detectedError } from "@/features/error";
+import type { detectedError } from "@/features/error";
 import {
-  ProjectExplorer,
-  ProjectFileViewer,
+  GithubProjectMemoryBanner,
+  ProjectDetailContent,
+  ProjectDetailHeader,
+  ProjectDetailSkeleton,
+  ProjectTabSummary,
+  type projectTab,
   useConnectGithubProjectToLocalFolder,
   useDeleteProject,
   useGithubProjectBranches,
   useProject,
   useSwitchGithubProjectBranch
 } from "@/features/project";
-import { readProjectDirectory } from "@/features/project/services/project-directory-service";
 import { selectProjectFolder } from "@/features/project/services/project-dialog-service";
 import { useProjectStore } from "@/features/project/stores/project-store";
-import {
-  CommandRunner,
-  RunHistoryTable,
-  RunLogPanel,
-  useRunHistory
-} from "@/features/run";
+import { useRunHistory } from "@/features/run";
 import type { runResult } from "@/features/run";
-import { cn } from "@/shared/lib/utils";
-import { Button } from "@/shared/ui/button";
-import { Select, type selectOption } from "@/shared/ui/select";
-import { Skeleton } from "@/shared/ui/skeleton";
-
-type projectTab = "explorer" | "runs" | "errors" | "knowledge" | "settings";
-
-const tabs: projectTab[] = ["explorer", "runs", "errors", "knowledge", "settings"];
+import type { selectOption } from "@/shared/ui/select";
 
 export const ProjectRoute = () => {
   const { t } = useTranslation();
@@ -149,7 +138,7 @@ export const ProjectRoute = () => {
   };
 
   if (project.isLoading) {
-    return <ProjectRouteSkeleton />;
+    return <ProjectDetailSkeleton />;
   }
 
   if (!project.data) {
@@ -165,143 +154,67 @@ export const ProjectRoute = () => {
       transition={{ duration: 0.22, ease: "easeOut" }}
       className="flex h-screen flex-col overflow-hidden"
     >
-      <header className="border-b bg-card px-4 py-3">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h1 className="text-lg font-semibold">{projectData.name}</h1>
-            <p className="font-mono text-xs text-muted-foreground">
-              {projectData.path}
-            </p>
-          </div>
-          <div className="grid grid-cols-5 gap-2 text-xs">
-            <Metadata label={t("project.runtime")} value={projectData.runtime} />
-            <Metadata label={t("project.framework")} value={projectData.framework} />
-            <Metadata label={t("project.package")} value={projectData.packageManager} />
-            {projectData.source === "github" ? (
-              <BranchMetadata
-                label={t("project.branch")}
-                value={projectData.branch}
-                isLoading={githubBranches.isLoading || switchGithubBranch.isPending}
-                options={getBranchOptions({
-                  currentBranch: projectData.branch,
-                  branches: githubBranches.data ?? []
-                })}
-                onChange={handleBranchChange}
-              />
-            ) : (
-              <Metadata label={t("project.branch")} value={projectData.branch} />
-            )}
-            <Metadata
-              label={t("project.source")}
-              value={
-                projectData.source === "github"
-                  ? t("project.githubSource")
-                  : t("project.localSource")
-              }
-            />
-          </div>
-        </div>
-        <div className="mt-3 flex items-center justify-between gap-4">
-          <div className="flex rounded-md border bg-background p-1">
-            {tabs.map((tab) => (
-              <button
-                key={tab}
-                type="button"
-                className={cn(
-                  "h-7 rounded px-2 text-xs capitalize text-muted-foreground",
-                  activeTab === tab && "bg-muted text-foreground"
-                )}
-                onClick={() => handleTabChange(tab)}
-              >
-                {t(`project.tabs.${tab}`)}
-              </button>
-            ))}
-          </div>
-          {projectData.source === "local" ? (
-            <CommandRunner
-              projectId={projectData.id}
-              projectPath={projectData.path}
-              onRunUpdate={(result) => {
-                setLiveRun(result);
-                setSelectedRun((currentRun) =>
-                  !currentRun || currentRun.id === result.id ? result : currentRun
-                );
-                void navigate({ search: { tab: "runs" } });
-              }}
-              onRunError={() => {
-                setLiveRun(null);
-              }}
-              onRunComplete={(result) => {
-                setLiveRun(null);
-                addRun(result);
-                setSelectedRun(result);
-                void navigate({ search: { tab: "runs" } });
-              }}
-            />
-          ) : (
-            <div className="flex items-center gap-2">
-              <Button
-                type="button"
-                size="sm"
-                variant={activeTab === "knowledge" ? "primary" : "secondary"}
-                onClick={() => handleTabChange("knowledge")}
-              >
-                <BookOpenText className="h-4 w-4" />
-                {t("project.openMemory")}
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant="secondary"
-                disabled={connectLocalFolder.isPending}
-                onClick={() => void handleConnectLocalFolder()}
-              >
-                {connectLocalFolder.isPending ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <FolderGit2 className="h-4 w-4" />
-                )}
-                {t("project.connectLocalFolder")}
-              </Button>
-            </div>
-          )}
-        </div>
-        {connectLocalFolder.error instanceof Error && (
-          <p className="mt-2 text-xs text-destructive">
-            {connectLocalFolder.error.message}
-          </p>
-        )}
-      </header>
+      <ProjectDetailHeader
+        activeTab={activeTab}
+        branchOptions={getBranchOptions({
+          currentBranch: projectData.branch,
+          branches: githubBranches.data ?? []
+        })}
+        connectLocalFolderError={
+          connectLocalFolder.error instanceof Error ? connectLocalFolder.error : null
+        }
+        isBranchLoading={githubBranches.isLoading || switchGithubBranch.isPending}
+        isConnectLocalFolderPending={connectLocalFolder.isPending}
+        labels={{
+          branch: t("project.branch"),
+          connectLocalFolder: t("project.connectLocalFolder"),
+          framework: t("project.framework"),
+          githubSource: t("project.githubSource"),
+          localSource: t("project.localSource"),
+          openMemory: t("project.openMemory"),
+          package: t("project.package"),
+          runtime: t("project.runtime"),
+          source: t("project.source")
+        }}
+        onBranchChange={handleBranchChange}
+        onConnectLocalFolder={() => void handleConnectLocalFolder()}
+        onRunUpdate={(result) => {
+          setLiveRun(result);
+          setSelectedRun((currentRun) =>
+            !currentRun || currentRun.id === result.id ? result : currentRun
+          );
+          void navigate({ search: { tab: "runs" } });
+        }}
+        onRunError={() => {
+          setLiveRun(null);
+        }}
+        onRunComplete={(result) => {
+          setLiveRun(null);
+          addRun(result);
+          setSelectedRun(result);
+          void navigate({ search: { tab: "runs" } });
+        }}
+        onTabChange={handleTabChange}
+        project={projectData}
+        tabLabel={(tab) => t(`project.tabs.${tab}`)}
+      />
 
       <section className="flex min-h-0 flex-1 flex-col overflow-hidden p-4">
         {projectData.source === "github" && (
-          <section className="mb-3 shrink-0 rounded-md border bg-card p-3">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <div className="flex items-center gap-2 text-sm font-medium">
-                  <BookOpenText className="h-4 w-4" />
-                  {t("project.githubMemoryTitle")}
-                </div>
-                <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                  {t("project.githubMemoryDetail")}
-                </p>
-              </div>
-            </div>
-            {switchGithubBranch.error instanceof Error && (
-              <p className="mt-2 text-xs text-destructive">
-                {switchGithubBranch.error.message}
-              </p>
-            )}
-          </section>
+          <GithubProjectMemoryBanner
+            title={t("project.githubMemoryTitle")}
+            detail={t("project.githubMemoryDetail")}
+            error={
+              switchGithubBranch.error instanceof Error
+                ? switchGithubBranch.error
+                : null
+            }
+          />
         )}
-        <div className="mb-3 shrink-0 rounded-md border bg-card px-3 py-2">
-          <div className="text-xs font-medium">
-            {t(`project.tabs.${activeTab}`)}
-          </div>
-          <div className="mt-1 text-xs text-muted-foreground">
-            {t(`project.tabDescriptions.${activeTab}`)}
-          </div>
-        </div>
+        <ProjectTabSummary
+          title={t(`project.tabs.${activeTab}`)}
+          description={t(`project.tabDescriptions.${activeTab}`)}
+        />
         <AnimatePresence mode="wait">
           <motion.div
             key={activeTab}
@@ -311,191 +224,34 @@ export const ProjectRoute = () => {
             transition={{ duration: 0.18, ease: "easeOut" }}
             className="min-h-0 flex-1"
           >
-            {activeTab === "explorer" && (
-              <div className="grid h-full min-h-0 grid-cols-[minmax(280px,360px)_1fr] gap-4">
-                <ProjectExplorer
-                  tree={projectData.tree}
-                  selectedFilePath={selectedFilePath}
-                  onLoadDirectory={
-                    projectData.source === "local"
-                      ? (directoryPath) =>
-                          readProjectDirectory({
-                            directoryPath,
-                            projectPath: projectData.path
-                          })
-                      : undefined
-                  }
-                  onSelectFile={setSelectedFilePath}
-                />
-                <ProjectFileViewer
-                  filePath={selectedFilePath}
-                  project={projectData}
-                />
-              </div>
-            )}
-            {activeTab === "runs" && (
-              <div className="grid h-full min-h-0 gap-4 xl:grid-cols-[320px_minmax(0,1fr)]">
-                <RunHistoryTable
-                  runs={visibleRuns}
-                  selectedRun={selectedRun}
-                  onSelectRun={setSelectedRun}
-                />
-                <RunLogPanel run={selectedRun} />
-              </div>
-            )}
-            {activeTab === "errors" && (
-              <div className="grid gap-4">
-                <ErrorTable
-                  errors={errors}
-                  resolvedErrorIds={resolvedErrorIds}
-                  selectedError={selectedError}
-                  onSelectError={setSelectedError}
-                />
-                <ResolutionNotes
-                  error={selectedError}
-                  onNoteSaved={() =>
-                    setNotesVersion((currentVersion) => currentVersion + 1)
-                  }
-                  projectId={projectData.id}
-                />
-              </div>
-            )}
-            {activeTab === "knowledge" && (
-              <div className="grid gap-4">
-                <ProjectMemo
-                  onMemoSaved={() =>
-                    setNotesVersion((currentVersion) => currentVersion + 1)
-                  }
-                  projectId={projectData.id}
-                />
-                <KnowledgeList
-                  errors={errors}
-                  refreshKey={notesVersion}
-                  projectId={projectData.id}
-                />
-              </div>
-            )}
-            {activeTab === "settings" && (
-              <div className="space-y-3">
-                <div className="rounded-md border bg-card p-4 text-sm text-muted-foreground">
-                  {t("project.settingsMessage")}
-                </div>
-                <div className="rounded-md border border-destructive/30 bg-card p-4">
-                  <div className="text-sm font-medium text-destructive">
-                    {t("project.deleteProject")}
-                  </div>
-                  <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                    {t("project.deleteProjectDetail")}
-                  </p>
-                  <Button
-                    type="button"
-                    className="mt-3"
-                    variant="danger"
-                    disabled={deleteProject.isPending}
-                    onClick={handleDeleteProject}
-                  >
-                    {deleteProject.isPending ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Trash2 className="h-4 w-4" />
-                    )}
-                    {t("project.deleteProject")}
-                  </Button>
-                </div>
-              </div>
-            )}
+            <ProjectDetailContent
+              activeTab={activeTab}
+              errors={errors}
+              isDeleting={deleteProject.isPending}
+              labels={{
+                deleteProject: t("project.deleteProject"),
+                deleteProjectDetail: t("project.deleteProjectDetail"),
+                settingsMessage: t("project.settingsMessage")
+              }}
+              notesVersion={notesVersion}
+              onDeleteProject={handleDeleteProject}
+              onNoteSaved={() =>
+                setNotesVersion((currentVersion) => currentVersion + 1)
+              }
+              onSelectError={setSelectedError}
+              onSelectFile={setSelectedFilePath}
+              onSelectRun={setSelectedRun}
+              project={projectData}
+              resolvedErrorIds={resolvedErrorIds}
+              runs={visibleRuns}
+              selectedError={selectedError}
+              selectedFilePath={selectedFilePath}
+              selectedRun={selectedRun}
+            />
           </motion.div>
         </AnimatePresence>
       </section>
     </motion.div>
-  );
-};
-
-const ProjectRouteSkeleton = () => (
-  <div className="flex h-screen flex-col overflow-hidden">
-    <div className="border-b bg-card px-4 py-3">
-      <Skeleton className="h-6 w-48" />
-      <Skeleton className="mt-2 h-4 w-80 max-w-full" />
-      <div className="mt-4 grid grid-cols-5 gap-2">
-        {Array.from({ length: 5 }).map((_, index) => (
-          <div key={index} className="rounded-md border bg-background p-2">
-            <Skeleton className="h-3 w-16" />
-            <Skeleton className="mt-2 h-4 w-20" />
-          </div>
-        ))}
-      </div>
-      <div className="mt-4 flex items-center justify-between gap-4">
-        <div className="flex gap-2">
-          {Array.from({ length: 5 }).map((_, index) => (
-            <Skeleton key={index} className="h-7 w-16" />
-          ))}
-        </div>
-        <Skeleton className="h-9 w-28" />
-      </div>
-    </div>
-    <div className="grid min-h-0 flex-1 grid-cols-[320px_1fr] gap-4 p-4">
-      <div className="rounded-md border bg-card p-3">
-        {Array.from({ length: 10 }).map((_, index) => (
-          <Skeleton key={index} className="mb-2 h-7 w-full last:mb-0" />
-        ))}
-      </div>
-      <div className="rounded-md border bg-card p-3">
-        <Skeleton className="h-5 w-56" />
-        <Skeleton className="mt-2 h-4 w-32" />
-        <div className="mt-4 space-y-2">
-          {Array.from({ length: 14 }).map((_, index) => (
-            <Skeleton key={index} className="h-4 w-full" />
-          ))}
-        </div>
-      </div>
-    </div>
-  </div>
-);
-
-type metadataProps = {
-  label: string;
-  value: string;
-};
-
-type branchMetadataProps = {
-  isLoading: boolean;
-  label: string;
-  onChange: (branch: string) => void;
-  options: selectOption[];
-  value: string;
-};
-
-const BranchMetadata = ({
-  isLoading,
-  label,
-  onChange,
-  options,
-  value
-}: branchMetadataProps) => {
-  return (
-    <div className="min-w-[110px] rounded-md border bg-background px-3 py-2">
-      <div className="text-muted-foreground">{label}</div>
-      <Select
-        aria-label={label}
-        value={value}
-        options={options}
-        icon={<GitBranch className="h-4 w-4 shrink-0 text-muted-foreground" />}
-        isLoading={isLoading}
-        size="sm"
-        className="mt-1 h-7 w-full border-transparent bg-muted px-2"
-        selectClassName="font-mono"
-        onChange={(event) => onChange(event.target.value)}
-      />
-    </div>
-  );
-};
-
-const Metadata = ({ label, value }: metadataProps) => {
-  return (
-    <div className="min-w-[110px] rounded-md border bg-background px-3 py-2">
-      <div className="text-muted-foreground">{label}</div>
-      <div className="mt-1 truncate font-mono">{value}</div>
-    </div>
   );
 };
 

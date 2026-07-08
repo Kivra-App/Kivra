@@ -1,16 +1,15 @@
 import { motion } from "framer-motion";
-import {
-  FileCode,
-  FileText
-} from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { FileCode, FileText } from "lucide-react";
+import { Suspense, lazy, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { isTauriRuntime } from "@/core/tauri/tauri-client";
-import { CodeNodeViewer } from "@/features/project/components/code-node-viewer";
+import { CodeViewer } from "@/features/project/components/code-viewer";
+import { MarkdownPreview } from "@/features/project/components/markdown-preview";
 import { useProjectFile } from "@/features/project/hooks/use-project-file";
 import { buildCodeNodeGraph } from "@/features/project/services/node-graph-service";
 import type { project } from "@/features/project/types/project";
+import { canShowNodeView, getFileLanguage } from "@/features/project/utils/file-language";
 import { cn } from "@/shared/lib/utils";
 import { Skeleton } from "@/shared/ui/skeleton";
 
@@ -20,6 +19,14 @@ type projectFileViewerProps = {
 };
 
 type viewMode = "code" | "preview" | "nodes";
+
+const LazyCodeNodeViewer = lazy(async () => {
+  const module = await import("@/features/project/components/code-node-viewer");
+
+  return {
+    default: module.CodeNodeViewer
+  };
+});
 
 export const ProjectFileViewer = ({ filePath, project }: projectFileViewerProps) => {
   const { t } = useTranslation();
@@ -119,7 +126,13 @@ export const ProjectFileViewer = ({ filePath, project }: projectFileViewerProps)
         </div>
       </div>
       {viewMode === "nodes" ? (
-        nodeGraph ? <CodeNodeViewer graph={nodeGraph} /> : <EmptyState message="No parseable nodes." />
+        nodeGraph ? (
+          <Suspense fallback={<ProjectFileViewerSkeleton />}>
+            <LazyCodeNodeViewer graph={nodeGraph} />
+          </Suspense>
+        ) : (
+          <EmptyState message="No parseable nodes." />
+        )
       ) : isMarkdown && viewMode === "preview" ? (
         <MarkdownPreview content={file.data.content} />
       ) : (
@@ -160,210 +173,6 @@ const getViewModes = ({
   }
 
   return modes;
-};
-
-type codeViewerProps = {
-  content: string;
-  compact?: boolean;
-  language: string;
-};
-
-const CodeViewer = ({ compact = false, content, language }: codeViewerProps) => {
-  const lines = content.split("\n");
-  const isNode = language === "Node";
-
-  return (
-    <div
-      className={cn(
-        "overflow-auto bg-background",
-        compact ? "max-h-80" : "h-[calc(100%-57px)]"
-      )}
-    >
-      {isNode && (
-        <div className="sticky top-0 z-10 border-b bg-card px-3 py-2 font-mono text-[11px] text-muted-foreground">
-          Node runtime view
-        </div>
-      )}
-      <pre className="min-w-max p-0 font-mono text-xs leading-5">
-        {lines.map((line, index) => (
-          <div key={`${index}-${line}`} className="grid grid-cols-[48px_1fr]">
-            <span className="select-none border-r px-3 text-right text-muted-foreground/60">
-              {index + 1}
-            </span>
-            <code className="px-3">
-              {isNode ? highlightNodeLine(line) : line || " "}
-            </code>
-          </div>
-        ))}
-      </pre>
-    </div>
-  );
-};
-
-const MarkdownPreview = ({ content }: { content: string }) => {
-  const lines = content.split("\n");
-  const blocks = [];
-  let index = 0;
-
-  while (index < lines.length) {
-    const line = lines[index];
-
-    if (line.startsWith("```")) {
-      const codeLines = [];
-      const language = line.replace("```", "").trim() || "Code";
-      index += 1;
-
-      while (index < lines.length && !lines[index].startsWith("```")) {
-        codeLines.push(lines[index]);
-        index += 1;
-      }
-
-      blocks.push(
-        <div key={index} className="overflow-hidden rounded-md border bg-background">
-          <div className="border-b px-3 py-2 font-mono text-[11px] text-muted-foreground">
-            {language}
-          </div>
-          <CodeViewer
-            compact
-            content={codeLines.join("\n")}
-            language={getLanguageLabel(language)}
-          />
-        </div>
-      );
-      index += 1;
-      continue;
-    }
-
-    if (!line.trim()) {
-      blocks.push(<div key={index} className="h-3" />);
-      index += 1;
-      continue;
-    }
-
-    const heading = line.match(/^(#{1,3})\s+(.*)$/);
-
-    if (heading) {
-      const level = heading[1].length;
-      const className =
-        level === 1
-          ? "text-2xl font-semibold"
-          : level === 2
-            ? "text-lg font-semibold"
-            : "text-sm font-semibold";
-      blocks.push(
-        <div key={index} className={cn("mt-3 first:mt-0", className)}>
-          {renderInlineMarkdown(heading[2])}
-        </div>
-      );
-      index += 1;
-      continue;
-    }
-
-    const listItem = line.match(/^[-*]\s+(.*)$/);
-
-    if (listItem) {
-      blocks.push(
-        <div key={index} className="flex gap-2 text-sm leading-6 text-muted-foreground">
-          <span className="mt-2 h-1 w-1 rounded-full bg-muted-foreground" />
-          <span>{renderInlineMarkdown(listItem[1])}</span>
-        </div>
-      );
-      index += 1;
-      continue;
-    }
-
-    blocks.push(
-      <p key={index} className="text-sm leading-6 text-muted-foreground">
-        {renderInlineMarkdown(line)}
-      </p>
-    );
-    index += 1;
-  }
-
-  return (
-    <div className="h-[calc(100%-57px)] overflow-auto bg-background p-5">
-      <div className="mx-auto max-w-3xl space-y-1">{blocks}</div>
-    </div>
-  );
-};
-
-const canShowNodeView = (language: string) => {
-  return ["JSON", "Node", "Rust"].includes(language);
-};
-
-const renderInlineMarkdown = (value: string) => {
-  const parts = value.split(/(`[^`]+`)/g);
-
-  return parts.map((part, index) => {
-    if (part.startsWith("`") && part.endsWith("`")) {
-      return (
-        <code
-          key={`${part}-${index}`}
-          className="rounded border bg-card px-1 py-0.5 font-mono text-xs text-foreground"
-        >
-          {part.slice(1, -1)}
-        </code>
-      );
-    }
-
-    return <span key={`${part}-${index}`}>{part}</span>;
-  });
-};
-
-const highlightNodeLine = (line: string) => {
-  const tokens = line.split(
-    /(\b(?:const|let|var|function|return|import|from|export|async|await|type|interface|class|new|if|else|throw|try|catch)\b|"[^"]*"|'[^']*'|`[^`]*`|\/\/.*)/g
-  );
-
-  return tokens.map((token, index) => {
-    const key = `${token}-${index}`;
-
-    if (/^\/\/.*/.test(token)) {
-      return <span key={key} className="text-muted-foreground">{token}</span>;
-    }
-
-    if (/^["'`]/.test(token)) {
-      return <span key={key} className="text-emerald-300">{token}</span>;
-    }
-
-    if (/^\b(?:const|let|var|function|return|import|from|export|async|await|type|interface|class|new|if|else|throw|try|catch)\b$/.test(token)) {
-      return <span key={key} className="text-primary">{token}</span>;
-    }
-
-    return <span key={key}>{token}</span>;
-  });
-};
-
-const getFileLanguage = (filePath: string | null) => {
-  const extension = filePath?.split(".").pop()?.toLowerCase();
-
-  if (!extension) {
-    return "Text";
-  }
-
-  if (["js", "jsx", "ts", "tsx", "mjs", "cjs"].includes(extension)) {
-    return "Node";
-  }
-
-  if (["md", "mdx"].includes(extension)) {
-    return "Markdown";
-  }
-
-  const labels: Record<string, string> = {
-    css: "CSS",
-    html: "HTML",
-    json: "JSON",
-    rs: "Rust",
-    toml: "TOML",
-    yaml: "YAML",
-    yml: "YAML"
-  };
-
-  return labels[extension] ?? extension.toUpperCase();
-};
-
-const getLanguageLabel = (language: string) => {
-  return getFileLanguage(`file.${language.toLowerCase()}`);
 };
 
 type emptyStateProps = {

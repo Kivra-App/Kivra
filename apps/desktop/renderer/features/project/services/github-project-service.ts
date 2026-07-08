@@ -1,7 +1,24 @@
-import { z } from "zod";
-
-import { getGithubAccessToken } from "@/features/auth/services/auth-service";
 import { projectFileSchema } from "@/features/project/schemas/project-schema";
+import {
+  githubBranchesResponseSchema,
+  githubContentResponseSchema,
+  githubFetch,
+  githubRepositoriesResponseSchema,
+  githubTreeResponseSchema,
+  type githubBranchResponse,
+  type githubContentResponse,
+  type githubRepositoryResponse,
+  type githubTreeResponse
+} from "@/features/project/services/github-api";
+import {
+  inferFramework,
+  inferPackageManager,
+  inferRuntime
+} from "@/features/project/services/github-project-inference";
+import {
+  decodeBase64Content,
+  getGithubRepoPath
+} from "@/features/project/services/github-project-path";
 import type {
   githubBranch,
   project,
@@ -22,113 +39,6 @@ export type githubRepository = {
   language: string | null;
   updatedAt: string;
 };
-
-type githubRepositoryResponse = {
-  id: number;
-  name: string;
-  full_name: string;
-  owner: { login: string };
-  default_branch: string;
-  description: string | null;
-  html_url: string;
-  private: boolean;
-  language: string | null;
-  updated_at: string;
-};
-
-type githubTreeResponse = {
-  tree: Array<{
-    path: string;
-    type: "blob" | "tree";
-  }>;
-};
-
-type githubBranchResponse = {
-  name: string;
-};
-
-type githubContentResponse = {
-  content?: string;
-  encoding?: string;
-  size: number;
-  type: string;
-};
-
-const githubRepositoryResponseSchema = z.object({
-  id: z.number(),
-  name: z.string(),
-  full_name: z.string(),
-  owner: z.object({ login: z.string() }),
-  default_branch: z.string(),
-  description: z.string().nullable(),
-  html_url: z.string(),
-  private: z.boolean(),
-  language: z.string().nullable(),
-  updated_at: z.string()
-});
-
-const githubRepositoriesResponseSchema = z.array(githubRepositoryResponseSchema);
-
-const githubTreeResponseSchema = z.object({
-  tree: z.array(
-    z.object({
-      path: z.string(),
-      type: z.enum(["blob", "tree"])
-    })
-  )
-});
-
-const githubBranchesResponseSchema = z.array(
-  z.object({
-    name: z.string()
-  })
-);
-
-const githubContentResponseSchema = z.object({
-  content: z.string().optional(),
-  encoding: z.string().optional(),
-  size: z.number(),
-  type: z.string()
-});
-
-const githubFetch = async <T>(path: string): Promise<T> => {
-  const token = await getGithubAccessToken();
-
-  if (!token) {
-    throw new Error("GITHUB_TOKEN_REQUIRED");
-  }
-
-  let response = await fetchGithubPath(path, token);
-
-  if (response.status === 401) {
-    const refreshedToken = await getGithubAccessToken({ forceRefresh: true });
-
-    if (!refreshedToken) {
-      throw new Error("GITHUB_TOKEN_REQUIRED");
-    }
-
-    response = await fetchGithubPath(path, refreshedToken);
-  }
-
-  if (response.status === 401) {
-    throw new Error("GITHUB_TOKEN_REQUIRED");
-  }
-
-  if (!response.ok) {
-    throw new Error(`GITHUB_API_${response.status}`);
-  }
-
-  return response.json() as Promise<T>;
-};
-
-const fetchGithubPath = (path: string, token: string) =>
-  fetch(`https://api.github.com${path}`, {
-    headers: {
-      Accept: "application/vnd.github+json",
-      Authorization: `Bearer ${token}`,
-      "X-GitHub-Api-Version": "2022-11-28"
-    }
-  });
 
 export const fetchGithubRepositories = async (): Promise<githubRepository[]> => {
   const repos = githubRepositoriesResponseSchema.parse(
@@ -179,7 +89,7 @@ export const createGithubProject = async (
 export const hydrateGithubProjectTree = async (
   project: project
 ): Promise<project> => {
-  const repoPath = getRepoPath(project);
+  const repoPath = getGithubRepoPath(project);
 
   return {
     ...project,
@@ -196,7 +106,7 @@ export const hydrateGithubProjectBranch = async (args: {
   branch: string;
   project: project;
 }): Promise<project> => {
-  const repoPath = getRepoPath(args.project);
+  const repoPath = getGithubRepoPath(args.project);
 
   return {
     ...args.project,
@@ -213,7 +123,7 @@ export const hydrateGithubProjectBranch = async (args: {
 export const fetchGithubProjectBranches = async (
   project: project
 ): Promise<githubBranch[]> => {
-  const repoPath = getRepoPath(project);
+  const repoPath = getGithubRepoPath(project);
   const branches = githubBranchesResponseSchema.parse(
     await githubFetch<githubBranchResponse[]>(
       `/repos/${repoPath}/branches?per_page=100`
@@ -227,7 +137,7 @@ export const readGithubProjectFile = async (args: {
   filePath: string;
   project: project;
 }): Promise<projectFile> => {
-  const repoPath = getRepoPath(args.project);
+  const repoPath = getGithubRepoPath(args.project);
   const encodedPath = args.filePath
     .split("/")
     .map((part) => encodeURIComponent(part))
@@ -281,107 +191,4 @@ const fetchGithubProjectTree = async (repo: {
   sortTree(root);
 
   return root;
-};
-
-const getRepoPath = (project: project) => {
-  if (project.path.includes("/")) {
-    return project.path;
-  }
-
-  if (!project.repositoryUrl) {
-    throw new Error("GITHUB_REPOSITORY_REQUIRED");
-  }
-
-  return new URL(project.repositoryUrl).pathname.replace(/^\/|\.git$/g, "");
-};
-
-const inferRuntime = (language: string | null) => {
-  if (!language) {
-    return "unknown";
-  }
-
-  if (["JavaScript", "TypeScript"].includes(language)) {
-    return "Node.js";
-  }
-
-  return language;
-};
-
-const inferFramework = (tree: projectNode) => {
-  const paths = collectProjectPaths(tree);
-
-  if (paths.has("apps/desktop/native/tauri.conf.json") || paths.has("tauri.conf.json")) {
-    return "Tauri";
-  }
-
-  if (hasPackageHint(paths, "next.config.js")
-    || hasPackageHint(paths, "next.config.mjs")
-    || hasPackageHint(paths, "next.config.ts")) {
-    return "Next.js";
-  }
-
-  if (hasPackageHint(paths, "vite.config.ts") || hasPackageHint(paths, "vite.config.js")) {
-    return "Vite";
-  }
-
-  if (paths.has("package.json")) {
-    return "Node.js";
-  }
-
-  return "Repository";
-};
-
-const inferPackageManager = (tree: projectNode) => {
-  const paths = collectProjectPaths(tree);
-
-  if (hasPackageHint(paths, "pnpm-lock.yaml") || paths.has("pnpm-workspace.yaml")) {
-    return "pnpm";
-  }
-
-  if (hasPackageHint(paths, "yarn.lock")) {
-    return "yarn";
-  }
-
-  if (hasPackageHint(paths, "package-lock.json")) {
-    return "npm";
-  }
-
-  if (hasPackageHint(paths, "bun.lockb")) {
-    return "bun";
-  }
-
-  if (hasPackageHint(paths, "Cargo.toml")) {
-    return "cargo";
-  }
-
-  return "unknown";
-};
-
-const collectProjectPaths = (node: projectNode): Set<string> => {
-  const paths = new Set<string>();
-
-  const visit = (currentNode: projectNode, prefix = "") => {
-    const currentPath = prefix ? `${prefix}/${currentNode.name}` : currentNode.name;
-    paths.add(currentPath);
-
-    for (const child of currentNode.children ?? []) {
-      visit(child, currentPath);
-    }
-  };
-
-  for (const child of node.children ?? []) {
-    visit(child);
-  }
-
-  return paths;
-};
-
-const hasPackageHint = (paths: Set<string>, filename: string) =>
-  Array.from(paths).some((path) => path === filename || path.endsWith(`/${filename}`));
-
-const decodeBase64Content = (content: string) => {
-  const binary = window.atob(content.replace(/\n/g, ""));
-  const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
-
-  return new TextDecoder().decode(bytes);
 };
