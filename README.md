@@ -1,10 +1,16 @@
 # Kivra
 
-Build. Fail. Remember.
+<p align="center">
+  <img src="apps/web/public/favicon.png" alt="Kivra logo" />
+</p>
+
+**Build. Fail. Remember.**
 
 Kivra is a desktop-first developer memory app. It registers local projects,
 captures command runs, stores logs and detected errors, and keeps resolution
 notes searchable.
+
+> For a product overview, visit the [Kivra organization profile](https://github.com/Kivra-App).
 
 ## Run Locally
 
