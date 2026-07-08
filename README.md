@@ -1,7 +1,7 @@
 # Kivra
 
 <p align="center">
-  <img src="apps/web/public/favicon.png" alt="Kivra logo" />
+  <img src="apps/web/public/favicon.png" alt="Kivra logo" width="96" />
 </p>
 
 **Build. Fail. Remember.**
