@@ -10,21 +10,25 @@ import {
   LocateFixed,
   Maximize2,
   Minus,
-  Pin,
   Plus,
   RotateCcw,
-  Search,
   Shrink,
   X
 } from "lucide-react";
-import type { ReactNode } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 
+import { CodeNodeDetail } from "@/features/project/components/code-node-detail";
+import { CodeNodeGraphButton } from "@/features/project/components/code-node-graph-button";
+import { CodeNodeOutline } from "@/features/project/components/code-node-outline";
+import {
+  getNodeLabel,
+  getSelectedDetailNode
+} from "@/features/project/components/code-node-viewer-utils";
 import { useNodeGraph } from "@/features/project/hooks/use-node-graph";
-import type { codeNode, codeNodeCategory, codeNodeGraph } from "@/features/project/services/node-graph-service";
-import { NODE_GROUPS, getFileName } from "@/features/project/services/node-graph-service";
+import type { codeNodeGraph } from "@/features/project/services/node-graph-service";
+import { getFileName } from "@/features/project/services/node-graph-service";
 import type {
   nodeGraphFlowEdge,
   nodeGraphFlowNode
@@ -34,16 +38,6 @@ import { cn } from "@/shared/lib/utils";
 
 type codeNodeViewerProps = {
   graph: codeNodeGraph;
-};
-
-type detailNode = {
-  codePreview: string;
-  connectedNodeIds: string[];
-  filePath: string;
-  id: string;
-  lineNumber: number;
-  name: string;
-  type: string;
 };
 
 type graphFlowNode = nodeGraphFlowNode;
@@ -234,22 +228,22 @@ export const CodeNodeViewer = ({ graph }: codeNodeViewerProps) => {
         )}
         <div className="absolute right-3 top-3 z-20 flex items-center gap-1 rounded-md border bg-card/95 p-1 shadow-xl">
           {toolbarButtons.map((button) => (
-            <GraphButton
+            <CodeNodeGraphButton
               key={button.label}
               label={button.label}
               onClick={button.onClick}
             >
               {button.icon}
-            </GraphButton>
+            </CodeNodeGraphButton>
           ))}
           {isInspector ? (
-            <GraphButton label={t("explorer.nodeView.controls.closeInspector")} onClick={() => setIsInspectorOpen(false)}>
+            <CodeNodeGraphButton label={t("explorer.nodeView.controls.closeInspector")} onClick={() => setIsInspectorOpen(false)}>
               <X className="h-4 w-4" />
-            </GraphButton>
+            </CodeNodeGraphButton>
           ) : (
-            <GraphButton label={t("explorer.nodeView.controls.openInspector")} onClick={() => setIsInspectorOpen(true)}>
+            <CodeNodeGraphButton label={t("explorer.nodeView.controls.openInspector")} onClick={() => setIsInspectorOpen(true)}>
               <Expand className="h-4 w-4" />
-            </GraphButton>
+            </CodeNodeGraphButton>
           )}
         </div>
 
@@ -327,7 +321,7 @@ export const CodeNodeViewer = ({ graph }: codeNodeViewerProps) => {
                 className="grid min-h-0 flex-1 grid-cols-[300px_minmax(0,1fr)_340px]"
                 onClick={(event) => event.stopPropagation()}
               >
-                <NodeOutline
+                <CodeNodeOutline
                   graph={graph}
                   expandedGroups={nodeGraph.expandedGroups}
                   focusNode={focusNode}
@@ -338,7 +332,7 @@ export const CodeNodeViewer = ({ graph }: codeNodeViewerProps) => {
                   togglePinnedGroup={nodeGraph.togglePinnedGroup}
                 />
                 <div className="border-x">{graphCanvas({ mode: "inspector" })}</div>
-                <NodeDetail
+                <CodeNodeDetail
                   graph={graph}
                   node={selectedDetailNode}
                   visibleCodeNodes={nodeGraph.visibleCodeNodes}
@@ -350,269 +344,4 @@ export const CodeNodeViewer = ({ graph }: codeNodeViewerProps) => {
         )}
     </>
   );
-};
-
-const NodeOutline = ({
-  expandedGroups,
-  focusNode,
-  graph,
-  pinnedGroups,
-  searchQuery,
-  setSearchQuery,
-  toggleGroup,
-  togglePinnedGroup
-}: {
-  expandedGroups: Set<codeNodeCategory>;
-  focusNode: (nodeId: string) => void;
-  graph: codeNodeGraph;
-  pinnedGroups: Set<codeNodeCategory>;
-  searchQuery: string;
-  setSearchQuery: (value: string) => void;
-  toggleGroup: (category: codeNodeCategory) => void;
-  togglePinnedGroup: (category: codeNodeCategory) => void;
-}) => {
-  const { t } = useTranslation();
-
-  return (
-    <aside className="min-h-0 overflow-hidden bg-card">
-      <div className="border-b p-3">
-        <div className="text-xs font-medium uppercase text-muted-foreground">
-          {t("explorer.nodeView.outline")}
-        </div>
-        <button
-          type="button"
-          className="mt-2 w-full truncate text-left font-mono text-sm text-foreground"
-          onClick={() => focusNode(graph.fileNode.id)}
-        >
-          {graph.fileNode.name}
-        </button>
-        <div className="relative mt-3">
-          <Search className="absolute left-2 top-2 h-3.5 w-3.5 text-muted-foreground" />
-          <input
-            className="h-8 w-full rounded-md border bg-background pl-8 pr-2 text-xs outline-none focus:border-primary"
-            placeholder={t("explorer.nodeView.searchPlaceholder")}
-            value={searchQuery}
-            onChange={(event) => setSearchQuery(event.target.value)}
-          />
-        </div>
-      </div>
-      <div className="h-[calc(100%-105px)] overflow-auto p-2">
-        {NODE_GROUPS.map((group) => {
-          const graphGroup = graph.groups.find((item) => item.id === group.id);
-          const nodes = graphGroup?.nodes ?? [];
-          const isExpanded = expandedGroups.has(group.id);
-
-          return (
-            <div key={group.id} className="mb-1">
-              <div className="flex items-center gap-1">
-                <button
-                  type="button"
-                  className={cn(
-                    "flex h-8 min-w-0 flex-1 items-center justify-between rounded px-2 text-left text-xs transition hover:bg-muted",
-                    isExpanded && "bg-muted text-foreground"
-                  )}
-                  onClick={() => {
-                    toggleGroup(group.id);
-                    focusNode(`category:${group.id}`);
-                  }}
-                >
-                  <span>{t(`explorer.nodeView.groups.${group.id}`)}</span>
-                  <span className="font-mono text-muted-foreground">{nodes.length}</span>
-                </button>
-                <button
-                  type="button"
-                  title={
-                    pinnedGroups.has(group.id)
-                      ? t("explorer.nodeView.unpinGroup")
-                      : t("explorer.nodeView.pinGroup")
-                  }
-                  className={cn(
-                    "flex h-8 w-8 items-center justify-center rounded text-muted-foreground hover:bg-muted",
-                    pinnedGroups.has(group.id) && "text-foreground"
-                  )}
-                  onClick={() => togglePinnedGroup(group.id)}
-                >
-                  <Pin className="h-3.5 w-3.5" />
-                </button>
-              </div>
-              {isExpanded && (
-                <div className="ml-2 border-l pl-2">
-                  {nodes.slice(0, 12).map((node) => (
-                    <button
-                      key={node.id}
-                      type="button"
-                      className="block h-7 w-full truncate rounded px-2 text-left font-mono text-[11px] text-muted-foreground hover:bg-muted hover:text-foreground"
-                      onClick={() => focusNode(node.id)}
-                    >
-                      {node.name}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
-    </aside>
-  );
-};
-
-const NodeDetail = ({
-  graph,
-  node,
-  visibleCodeNodes
-}: {
-  graph: codeNodeGraph;
-  node: detailNode;
-  visibleCodeNodes: codeNode[];
-}) => {
-  const { t } = useTranslation();
-  const connectedNodes = getConnectedDetailNodes({
-    graph,
-    node,
-    visibleCodeNodes
-  });
-
-  return (
-    <aside className="min-h-0 overflow-auto bg-card p-3">
-      <div className="text-xs font-medium uppercase text-muted-foreground">
-        {t("explorer.nodeView.detail")}
-      </div>
-      <div className="mt-3 rounded-md border bg-background p-3">
-        <div className="truncate text-sm font-semibold">{node.name}</div>
-        <div className="mt-2 grid gap-1 font-mono text-[11px] text-muted-foreground">
-          <div>{node.type}</div>
-          <div className="truncate">{node.filePath}</div>
-          <div>{t("explorer.nodeView.line", { line: node.lineNumber })}</div>
-        </div>
-      </div>
-      <div className="mt-3">
-        <div className="mb-2 text-xs font-medium text-muted-foreground">
-          {t("explorer.nodeView.codePreview")}
-        </div>
-        <pre className="max-h-44 overflow-auto rounded-md border bg-background p-3 font-mono text-xs leading-5 text-muted-foreground">
-          {node.codePreview || t("explorer.nodeView.fileOverview")}
-        </pre>
-      </div>
-      <div className="mt-3">
-        <div className="mb-2 text-xs font-medium text-muted-foreground">
-          {t("explorer.nodeView.connections")}
-        </div>
-        <div className="space-y-1">
-          {connectedNodes.length === 0 ? (
-            <div className="rounded-md border bg-background p-3 text-xs text-muted-foreground">
-              {t("explorer.nodeView.noConnections")}
-            </div>
-          ) : (
-            connectedNodes.map((connection) => (
-              <div
-                key={connection.id}
-                className="rounded-md border bg-background px-3 py-2"
-              >
-                <div className="truncate text-xs">{connection.name}</div>
-                <div className="mt-1 font-mono text-[10px] text-muted-foreground">
-                  {connection.type} · L{connection.lineNumber}
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      </div>
-      <div className="mt-3 rounded-md border bg-background p-3 text-xs text-muted-foreground">
-        {getFileName(graph.fileNode.filePath)} · {t("explorer.nodeView.parsedNodes", { count: graph.totalNodeCount })}
-      </div>
-    </aside>
-  );
-};
-
-const GraphButton = ({
-  children,
-  label,
-  onClick
-}: {
-  children: ReactNode;
-  label: string;
-  onClick: () => void;
-}) => (
-  <button
-    type="button"
-    title={label}
-    className="flex h-8 w-8 items-center justify-center rounded text-muted-foreground transition hover:bg-muted hover:text-foreground"
-    onClick={onClick}
-  >
-    {children}
-  </button>
-);
-
-const getNodeLabel = (
-  node: nodeGraphFlowNode,
-  t: (key: string, options?: Record<string, unknown>) => string
-) => {
-  if (node.data.nodeType === "category" && node.data.category) {
-    return t(`explorer.nodeView.groups.${node.data.category}`);
-  }
-
-  if (node.data.nodeType === "more") {
-    return t("explorer.nodeView.more", { count: node.data.count ?? 0 });
-  }
-
-  return node.data.label;
-};
-
-const getSelectedDetailNode = ({
-  graph,
-  hiddenPreview,
-  nodeId,
-  nodes,
-  parsedNodes
-}: {
-  graph: codeNodeGraph;
-  hiddenPreview: string;
-  nodeId: string;
-  nodes: nodeGraphFlowNode[];
-  parsedNodes: (count: number) => string;
-}): detailNode => {
-  const flowNode = nodes.find((node) => node.id === nodeId);
-  const codeNode = flowNode?.data.codeNode;
-
-  if (codeNode) {
-    return codeNode;
-  }
-
-  if (flowNode) {
-    return {
-      codePreview:
-        flowNode.data.nodeType === "category"
-          ? parsedNodes(Number(flowNode.data.count ?? 0))
-          : hiddenPreview,
-      connectedNodeIds: flowNode.id.startsWith("category:")
-        ? [graph.fileNode.id]
-        : [flowNode.data.category ? `category:${flowNode.data.category}` : graph.fileNode.id],
-      filePath: graph.fileNode.filePath,
-      id: flowNode.id,
-      lineNumber: 1,
-      name: flowNode.data.label,
-      type: flowNode.data.nodeType
-    };
-  }
-
-  return graph.fileNode;
-};
-
-const getConnectedDetailNodes = ({
-  graph,
-  node,
-  visibleCodeNodes
-}: {
-  graph: codeNodeGraph;
-  node: detailNode;
-  visibleCodeNodes: codeNode[];
-}) => {
-  if (node.type === "file") {
-    return graph.groups.flatMap((group) => group.nodes.slice(0, 2));
-  }
-
-  const connectedIds = new Set(node.connectedNodeIds);
-
-  return visibleCodeNodes.filter((item) => connectedIds.has(item.id));
 };

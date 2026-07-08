@@ -3,17 +3,26 @@ import {
   AlertTriangle,
   CheckCircle2,
   Clock3,
-  Copy,
   ListFilter,
   Terminal,
   Timer,
   WrapText
 } from "lucide-react";
 import { useState } from "react";
-import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
+import {
+  CopyOutputButton,
+  OutputStatCard,
+  SegmentedControl,
+  SummaryChip
+} from "@/features/run/components/run-log-panel-parts";
 import type { runResult } from "@/features/run/types/run";
+import {
+  getOutputStats,
+  getVisibleOutput,
+  type runOutputStream
+} from "@/features/run/utils/run-output";
 import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/ui/button";
 
@@ -23,9 +32,7 @@ type runLogPanelProps = {
 
 export const RunLogPanel = ({ run }: runLogPanelProps) => {
   const { t } = useTranslation();
-  const [activeStream, setActiveStream] = useState<"all" | "stdout" | "stderr">(
-    "all"
-  );
+  const [activeStream, setActiveStream] = useState<runOutputStream>("all");
   const [wrapLines, setWrapLines] = useState(true);
 
   if (!run) {
@@ -93,9 +100,7 @@ export const RunLogPanel = ({ run }: runLogPanelProps) => {
             <div className="flex flex-wrap items-center gap-2">
               <SegmentedControl
                 value={activeStream}
-                onChange={(value) =>
-                  setActiveStream(value as "all" | "stdout" | "stderr")
-                }
+                onChange={setActiveStream}
                 options={[
                   { label: t("runs.all"), value: "all" },
                   { label: t("runs.stdout"), value: "stdout", disabled: !hasStdout },
@@ -188,161 +193,4 @@ export const RunLogPanel = ({ run }: runLogPanelProps) => {
       </div>
     </motion.div>
   );
-};
-
-const SummaryChip = ({
-  icon,
-  label,
-  value
-}: {
-  icon: ReactNode;
-  label: string;
-  value: string;
-}) => (
-  <div className="inline-flex items-center gap-2 rounded-md border bg-background px-3 py-2 text-xs">
-    <span className="text-muted-foreground">{icon}</span>
-    <span className="text-muted-foreground">{label}</span>
-    <span className="font-medium text-foreground">{value}</span>
-  </div>
-);
-
-const OutputStatCard = ({
-  label,
-  lines,
-  characters,
-  tone = "default"
-}: {
-  label: string;
-  lines: number;
-  characters: number;
-  tone?: "default" | "danger";
-}) => {
-  const { t } = useTranslation();
-
-  return (
-    <div
-      className={cn(
-        "rounded-md border bg-background p-3",
-        tone === "danger" && "border-destructive/30"
-      )}
-    >
-      <div className="text-xs font-medium uppercase text-muted-foreground">
-        {label}
-      </div>
-      <div className="mt-2 grid grid-cols-2 gap-2">
-        <div className="min-w-0">
-          <div className="text-[11px] text-muted-foreground">{t("runs.lines")}</div>
-          <div className="text-sm font-medium">{lines.toLocaleString()}</div>
-        </div>
-        <div className="min-w-0">
-          <div className="text-[11px] text-muted-foreground">
-            {t("runs.characters")}
-          </div>
-          <div className="text-sm font-medium">{characters.toLocaleString()}</div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const CopyOutputButton = ({ value }: { value: string }) => {
-  const { t } = useTranslation();
-
-  return (
-    <Button
-      type="button"
-      size="sm"
-      variant="secondary"
-      onClick={() => {
-        void navigator.clipboard?.writeText(value);
-      }}
-    >
-      <Copy className="h-4 w-4" />
-      {t("runs.copy")}
-    </Button>
-  );
-};
-
-const SegmentedControl = ({
-  onChange,
-  options,
-  value
-}: {
-  onChange: (value: string) => void;
-  options: { label: string; value: string; disabled?: boolean }[];
-  value: string;
-}) => (
-  <div className="flex h-8 items-center rounded-md border bg-background px-1">
-    {options.map((option) => (
-      <button
-        key={option.value}
-        type="button"
-        className={cn(
-          "flex h-6 items-center rounded px-2.5 text-xs transition",
-          value === option.value
-            ? "bg-muted text-foreground"
-            : "text-muted-foreground",
-          option.disabled && "cursor-not-allowed opacity-40"
-        )}
-        disabled={option.disabled}
-        onClick={() => onChange(option.value)}
-      >
-        {option.label}
-      </button>
-    ))}
-  </div>
-);
-
-const getVisibleOutput = ({
-  stderr,
-  stdout,
-  stream,
-  t
-}: {
-  stderr: string;
-  stdout: string;
-  stream: "all" | "stdout" | "stderr";
-  t: ReturnType<typeof useTranslation>["t"];
-}) => {
-  const normalizedStdout = stdout.trim();
-  const normalizedStderr = stderr.trim();
-
-  if (stream === "stdout") {
-    return normalizedStdout || t("runs.noOutput");
-  }
-
-  if (stream === "stderr") {
-    return normalizedStderr || t("runs.noOutput");
-  }
-
-  if (!normalizedStdout && !normalizedStderr) {
-    return t("runs.noOutput");
-  }
-
-  return [
-    normalizedStdout
-      ? `${t("runs.stdout").toUpperCase()}\n${normalizedStdout}`
-      : `${t("runs.stdout").toUpperCase()}\n${t("runs.noOutput")}`,
-    normalizedStderr
-      ? `${t("runs.stderr").toUpperCase()}\n${normalizedStderr}`
-      : null
-  ]
-    .filter(Boolean)
-    .join("\n\n");
-};
-
-const getOutputStats = (value: string) => {
-  const trimmedValue = value.trim();
-
-  if (!trimmedValue) {
-    return {
-      lines: 0,
-      characters: 0
-    };
-  }
-
-  return {
-    lines: trimmedValue.split(/\r?\n/).length,
-    characters: trimmedValue.length
-  };
 };

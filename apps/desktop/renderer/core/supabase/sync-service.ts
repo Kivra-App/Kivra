@@ -1,4 +1,10 @@
 import { supabase } from "@/core/supabase/supabase-client";
+import {
+  mapSyncedErrorNote,
+  mapSyncedProject,
+  mapSyncedProjectNote,
+  mapSyncedRun
+} from "@/core/supabase/sync-mappers";
 import type { resolutionNote } from "@/features/docs";
 import type { project } from "@/features/project";
 import { projectsSchema } from "@/features/project/schemas/project-schema";
@@ -205,26 +211,7 @@ export const fetchSyncedProjects = async (): Promise<project[]> => {
     return [];
   }
 
-  return projectsSchema.parse(
-    data.map((item) => ({
-      id: item.id,
-      name: item.name,
-      path: item.repository_url ?? item.name,
-      runtime: item.runtime,
-      framework: item.framework,
-      packageManager: item.package_manager,
-      branch: item.branch,
-      repositoryUrl: item.repository_url,
-      createdAt: item.created_at,
-      source: item.repository_url ? "github" : "local",
-      tree: {
-        id: item.id,
-        name: item.name,
-        path: item.repository_url ?? item.name,
-        type: "folder"
-      }
-    }))
-  );
+  return projectsSchema.parse(data.map(mapSyncedProject));
 };
 
 export const fetchSyncedRuns = async (
@@ -246,41 +233,7 @@ export const fetchSyncedRuns = async (
     return [];
   }
 
-  return data.map((item) => {
-    const logs = item.logs ?? [];
-    const stdout = logs
-      .filter((log) => log.level === "INFO")
-      .map((log) => log.content)
-      .join("\n");
-    const stderr = logs
-      .filter((log) => log.level === "ERROR")
-      .map((log) => log.content)
-      .join("\n");
-
-    return {
-      id: item.id,
-      projectId: item.project_id,
-      command: item.command,
-      status: item.status,
-      duration: item.duration,
-      stdout,
-      stderr,
-      exitCode: item.status === "SUCCESS" ? 0 : 1,
-      createdAt: item.created_at,
-      errors: (item.errors ?? []).map((error) => ({
-        id: error.id,
-        projectId: error.project_id,
-        runId: error.run_id,
-        errorCode: error.error_code,
-        message: error.message,
-        filePath: error.file_path,
-        lineNumber: error.line_number,
-        columnNumber: error.column_number,
-        stackTrace: error.stack_trace,
-        createdAt: error.created_at
-      }))
-    };
-  });
+  return data.map(mapSyncedRun);
 };
 
 export const fetchSyncedNotes = async (
@@ -315,23 +268,7 @@ export const fetchSyncedNotes = async (
   return [
     ...errorNotes
       .filter((item) => item.errors)
-      .map((item) => ({
-        id: item.id,
-        errorId: item.error_id,
-        projectId,
-        content: item.content,
-        kind: "error" as const,
-        createdAt: item.created_at,
-        updatedAt: item.created_at
-      })),
-    ...projectNotes.map((item) => ({
-      id: item.id,
-      errorId: null,
-      projectId,
-      content: item.content,
-      kind: "project" as const,
-      createdAt: item.created_at,
-      updatedAt: item.created_at
-    }))
+      .map((item) => mapSyncedErrorNote(item, projectId)),
+    ...projectNotes.map((item) => mapSyncedProjectNote(item, projectId))
   ];
 };
